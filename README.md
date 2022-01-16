@@ -11,7 +11,7 @@ A lightweight LINQ-like implementation for JavaScript.
 		- [Benefit from lazy execution](#benefit-from-lazy-execution)
 		- [Disable array buffering](#disable-array-buffering)
 	- [Common delegates](#common-delegates)
-		- [Value returning item action (key/value/data/result action)](#value-returning-item-action-key-value-data-result-action)
+		- [Value returning item action (key/value/data/result action)](#value-returning-item-action-keyvaluedataresult-action)
 		- [Item condition action (filter action)](#item-condition-action-filter-action)
 		- [Object comparer (comparer action)](#object-comparer-comparer-action)
 - [Useful LINQ extensions](#useful-linq-extensions)
