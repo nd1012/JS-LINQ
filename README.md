@@ -312,8 +312,8 @@ Feel free to load `linqext.js` or `linqext.min.js` in addition for some more hop
 - static `FromXml` parses a XML data source
 - static `FromNode` converts a `Node` object (from the DOM or an XML document f.e.)
 - static `Fibonacci` creates an (almost) endless Fibonacci sequence (will crash when it exceeds the maximum numeric value)
-- static `RandomInt` created an infinity sequence of random integer values
-- static `RandomArbitrary` created an infinity sequence of random numeric values
+- static `RandomInt` creates an infinity sequence of random integer values
+- static `RandomArbitrary` creates an infinity sequence of random numeric values
 
 The global `From` method will return a `LinqArrayExt` instead of a `LinqArray`.
 
