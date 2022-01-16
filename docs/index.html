@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>JS-LINQ demonstration</title>
+		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-Linq/src/linq.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-Linq/src/linqext.min.js"></script>
+		<style>
+			textarea{
+				font-family:Consolas,Courier;
+				font-size:12px;
+			}
+		</style>
+		<script>
+			function execute(){
+				try{
+					document.demo.output.value=JSON.stringify((new Function(document.demo.input.value))(),null,"\t");
+				}catch(ex){
+					document.demo.output.value=ex.stack;
+				}
+				return false;
+			}
+		</script>
+	</head>
+	<body>
+		<form name="demo" action="javascript:execute();">
+			<h1>JS-LINQ demonstration</h1>
+			<p>Use this form or open the browser developer tools (F12 or Shift+Ctrl+I) and play with the JavaScipt console directly. The extensions are loaded, too.</p>
+			<h2>JavaScript input</h2>
+			<textarea name="input" cols="80" rows="20" required spellcheck="false">// Example CSV data for a pivot table
+const exampleData=LinqArrayExt.FromCsv([
+	'seller,customer,turnover,country',
+	'1,10000,18000,DE',
+	'2,10547,9000,DE',
+	'2,10000,4000,DE',
+	'1,10386,28500,US',
+	'3,10386,1500,US',
+	'2,10000,6800,DE',
+	'3,18346,31999,IT',
+	'3,10547,30500,DE',
+	'1,10000,5000,DE',
+	'2,10837,22000,US'
+].join("\r\n"));
+console.log('Source data:');
+console.table(exampleData.ToArray());
+
+// Create a pivot table showing the turnover per seller and country, 
+// including a summary row with the turnover totals
+const pivot=exampleData.Pivot(
+
+	// Create one row per seller
+	LinqArrayExt.PivotRowColumn(
+
+		// The property name for the column value in a result row
+		'seller',
+
+		// We want to see a summary row for each country's, 
+		// and the total turnover as table footer
+		true
+
+	),
+
+	// Create one column per country, displaying the total turnover 
+	// per seller
+	LinqArrayExt.PivotGroupColumn(
+
+		// Group by the "country" property
+		'country',
+
+		// Use the summarized "turnover" as cell value
+		'turnover'
+
+	),
+
+	// Add a total turnover column (per seller and for the total summary)
+	LinqArrayExt.PivotCalcColumn(
+
+		// The property name for the column value in a result row
+		'summary',
+
+		// Summarize the "turnover" value of each item
+		'turnover'
+
+	)
+
+);
+
+// Get the pivot table as array to display the results
+const pivotAsArray=pivot.ToArray();
+console.log('Pivot table:');
+console.table(pivotAsArray);
+alert('Have a look at the JavaScript console (F12 or Shift+Ctrl+I) for a rendered pivot table');
+return pivotAsArray;</textarea>
+			<p><input type="submit" value="Execute"></p>
+			<h2>Return value JSON</h2>
+			<textarea name="output" cols="80" rows="20" readonly wrap="off" spellcheck="false"></textarea>
+		</form>
+	</body>
+</html>
