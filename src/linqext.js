@@ -171,7 +171,7 @@
 	 */
 	TakeRandom(){
 		const len=this.EnsureGenerated().length;
-		if(!len) throw new RangeError('No items');
+		if(!len) throw new RangeError();
 		return this.ElementAt(Math.floor(Math.random()*len));
 	}
 
@@ -293,6 +293,45 @@
 				prev=c;
 			}
 		}(),Math.max(0,csv.trim().split("\n").length-(header?1:0)));
+	}
+
+	/**
+	 * Parse a XML document
+	 * 
+	 * **NOTE**: It's assumed, that the root node contains the item nodes! Example:
+	 * 
+	 * 	<root>
+	 * 		<item>1</item>
+	 * 		<item>2</item>
+	 * 		...
+	 * 	</root>
+	 * 
+	 * @param {string} xml XML
+	 * @return {LinqArrayExt} LINQ array
+	 */
+	static FromXml(xml){return this.FromDomNode((new DOMParser()).parseFromString(xml,'application/xml').firstChild);}
+
+	/**
+	 * Convert a DOM
+	 * 
+	 * **NOTE**: Node attributes will be ignored! All child nodes from the given node will be used as object (if they have child nodes, too) or string items (recursive 
+	 * processing).
+	 * 
+	 * @param {ChildNode} node Child node
+	 * @return {LinqArrayExt} LINQ array
+	 */
+	static FromDomNode(node){
+		const nodeToObject=(node)=>{
+				if(!node.childNodes.length) return node.textContent;
+				const res={};
+				let child;
+				for(child of node.childNodes) res[child.nodeName]=child.childNodes.length?nodeToObject(node):node.textContent;
+				return res;
+			};
+		return (new this()).Generate(function*(){
+			let child;
+			for(child in node.childNodes) yield nodeToObject(child);
+		},node.childNodes.length);
 	}
 
 	/**

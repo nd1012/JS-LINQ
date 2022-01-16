@@ -581,12 +581,12 @@
 	First(action=null){
 		if(!action){
 			const first=this._GetIterator().next();
-			if(first.done) throw new RangeError('No item');
+			if(first.done) throw new RangeError();
 			return first.value;
 		}
 		let item;
 		for(item of this._Iterable) if(action(item)) return item;
-		throw new RangeError('No item');
+		throw new RangeError();
 	}
 
 	/**
@@ -616,12 +616,12 @@
 	Last(action=null){
 		if(!action){
 			const len=this.EnsureGenerated()._Iterable.length;
-			if(!len) throw new RangeError('No item');
+			if(!len) throw new RangeError();
 			return this._Iterable[len-1];
 		}
 		let item;
 		for(item of this.EnsureGenerated().slice().reverse()) if(action(item)) return item;
-		throw new RangeError('No item');
+		throw new RangeError();
 	}
 
 	/**
@@ -648,7 +648,7 @@
 	Single(action=null){
 		if(!action)
 			switch(this.EnsureGenerated(2)._Iterable.length){
-				case 0:throw new RangeError('No item');
+				case 0:throw new RangeError();
 				case 1:return this._Iterable[0];
 				default:throw new RangeError('Many items');
 			}
@@ -660,7 +660,7 @@
 			res=item;
 			found=true;
 		});
-		if(!found) throw new RangeError('No item');
+		if(!found) throw new RangeError();
 		return res;
 	}
 
@@ -692,7 +692,7 @@
 	ElementAt(index){
 		if(index<0) index=this.Count()-index;
 		this.EnsureGenerated(index+1);
-		if(index<0||index>=this._Iterable.length) throw new RangeError('Invalid index');
+		if(index<0||index>=this._Iterable.length) throw new RangeError();
 		return this._Iterable[index];
 	}
 
@@ -1124,7 +1124,7 @@
 	 */
 	Max(action=null){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new RangeError('No items');
+			case 0:throw new RangeError();
 			case 1:return this.First();
 			default:return Math.max(...(action==null?this:this.Select(action)));
 		}
@@ -1138,7 +1138,7 @@
 	 */
 	MaxBy(action){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new RangeError('No items');
+			case 0:throw new RangeError();
 			case 1:return this.First();
 		}
 		let max=null,
@@ -1164,7 +1164,7 @@
 	 */
 	Min(action=null){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new RangeError('No items');
+			case 0:throw new RangeError();
 			case 1:return this.First();
 			default:return Math.min(...(action==null?this:this.Select(action)));
 		}
@@ -1178,7 +1178,7 @@
 	 */
 	MinBy(action){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new RangeError('No items');
+			case 0:throw new RangeError();
 			case 1:return this.First();
 		}
 		let min=null,
