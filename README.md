@@ -13,6 +13,7 @@ A lightweight LINQ-like implementation for JavaScript.
 	- [Common delegates](#common-delegates)
 		- [Value returning item action (key/value/data/result action)](#value-returning-item-action-keyvaluedataresult-action)
 		- [Item condition action (filter action)](#item-condition-action-filter-action)
+		- [Sorting comparer (order action)](#sorting-comparer-order-action)
 		- [Object comparer (comparer action)](#object-comparer-comparer-action)
 - [Useful LINQ extensions](#useful-linq-extensions)
 - [More information](#more-information)
