@@ -171,7 +171,7 @@
 	 */
 	TakeRandom(){
 		const len=this.EnsureGenerated().length;
-		if(!len) throw new Error('No items');
+		if(!len) throw new RangeError('No items');
 		return this.ElementAt(Math.floor(Math.random()*len));
 	}
 
@@ -279,7 +279,7 @@
 					}
 					if(row){
 						if(row.length!=header.length)
-							throw new Error('Invalid row #'+index+' length (expected '+header.length+' fields, got '+row.length+'): '+JSON.stringify(row));
+							throw new RangeError('Invalid row #'+index+' length (expected '+header.length+' fields, got '+row.length+'): '+JSON.stringify(row));
 						item={};
 						for(col=0;col<row.length;item[header[col]]=row[col],col++);
 						yield result?result(item,header):item;

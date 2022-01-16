@@ -581,12 +581,12 @@
 	First(action=null){
 		if(!action){
 			const first=this._GetIterator().next();
-			if(first.done) throw new Error('No item');
+			if(first.done) throw new RangeError('No item');
 			return first.value;
 		}
 		let item;
 		for(item of this._Iterable) if(action(item)) return item;
-		throw new Error('No item');
+		throw new RangeError('No item');
 	}
 
 	/**
@@ -616,12 +616,12 @@
 	Last(action=null){
 		if(!action){
 			const len=this.EnsureGenerated()._Iterable.length;
-			if(!len) throw new Error('No item');
+			if(!len) throw new RangeError('No item');
 			return this._Iterable[len-1];
 		}
 		let item;
 		for(item of this.EnsureGenerated().slice().reverse()) if(action(item)) return item;
-		throw new Error('No item');
+		throw new RangeError('No item');
 	}
 
 	/**
@@ -648,19 +648,19 @@
 	Single(action=null){
 		if(!action)
 			switch(this.EnsureGenerated(2)._Iterable.length){
-				case 0:throw new Error('No item');
+				case 0:throw new RangeError('No item');
 				case 1:return this._Iterable[0];
-				default:throw new Error('Many items');
+				default:throw new RangeError('Many items');
 			}
 		let res,
 			found=false;
 		this.ForEach(item=>{
 			if(!action(item)) return;
-			if(found) throw new Error('Many items');
+			if(found) throw new RangeError('Many items');
 			res=item;
 			found=true;
 		});
-		if(!found) throw new Error('No item');
+		if(!found) throw new RangeError('No item');
 		return res;
 	}
 
@@ -676,7 +676,7 @@
 		let found=false;
 		this.ForEach(item=>{
 			if(action&&!action(item)) return;
-			if(found) throw new Error('Many items');
+			if(found) throw new RangeError('Many items');
 			defaultResult=item;
 			found=true;
 		});
@@ -692,7 +692,7 @@
 	ElementAt(index){
 		if(index<0) index=this.Count()-index;
 		this.EnsureGenerated(index+1);
-		if(index<0||index>=this._Iterable.length) throw new Error('Invalid index');
+		if(index<0||index>=this._Iterable.length) throw new RangeError('Invalid index');
 		return this._Iterable[index];
 	}
 
@@ -1124,7 +1124,7 @@
 	 */
 	Max(action=null){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new Error('No items');
+			case 0:throw new RangeError('No items');
 			case 1:return this.First();
 			default:return Math.max(...(action==null?this:this.Select(action)));
 		}
@@ -1138,7 +1138,7 @@
 	 */
 	MaxBy(action){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new Error('No items');
+			case 0:throw new RangeError('No items');
 			case 1:return this.First();
 		}
 		let max=null,
@@ -1164,7 +1164,7 @@
 	 */
 	Min(action=null){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new Error('No items');
+			case 0:throw new RangeError('No items');
 			case 1:return this.First();
 			default:return Math.min(...(action==null?this:this.Select(action)));
 		}
@@ -1178,7 +1178,7 @@
 	 */
 	MinBy(action){
 		switch(this.EnsureGenerated()._Iterable.length){
-			case 0:throw new Error('No items');
+			case 0:throw new RangeError('No items');
 			case 1:return this.First();
 		}
 		let min=null,
@@ -1439,7 +1439,7 @@
 	 */
 	EnsureGenerated(until=null){
 		if(this.#Extended||this.#IsGenerated||!this.#Generator||(until&&this.length>=until)) return this;
-		if(!this.#Store) throw new Error('Storing was disabled');
+		if(!this.#Store) throw new TypeError('Storing was disabled');
 		const generator=this.#Generator;
 		let item=null;
 		for(let count=until??0;(!until||count)&&!(item=generator.next()).done;this.push(item.value),count--);
@@ -1520,8 +1520,8 @@
 	 * @return {LinqArray} This
 	 */
 	DisableStore(pass=false){
-		if(!this.#Store) throw new Error('Storing is disabled already');
-		if(this.length) throw new Error('Stored already');
+		if(!this.#Store) throw new TypeError('Storing is disabled already');
+		if(this.length) throw new TypeError('Stored already');
 		this.#Store=false;
 		this.#PassStore=pass;
 		return this;
@@ -1587,7 +1587,7 @@
 	 * @return {Array} Final action and default result
 	 */
 	#EnsureActionOrDefaultResult(action,defaultResult){
-		if(LinqArray.Helper.IsUndefined(action)) throw new Error('Action or default result required');
+		if(LinqArray.Helper.IsUndefined(action)) throw new TypeError('Action or default result required');
 		if(!LinqArray.Helper.IsFunction(action)){
 			defaultResult=action;
 			action=null;
@@ -1607,7 +1607,7 @@
 			const generator=this.#Generator,
 				superGenerator=super[Symbol.iterator]();
 			if(!generator){
-				if(!this.#Store) throw new Error('Iterated already - buffer is disabled');
+				if(!this.#Store) throw new TypeError('Iterated already - buffer is disabled');
 				yield* superGenerator;
 			}else if(generator){
 				if(superGenerator) for(let item=superGenerator.next();!item.done;item=superGenerator.next()) yield item.value;
