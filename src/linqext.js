@@ -36,7 +36,7 @@
 	LeftJoin(arr,action,arrAction,result,comp=null){
 		action=LinqArray.Helper.EnsureValueGetter(action);
 		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		arr=LinqArray.Helper.EnsureLinqArray(arr);
+		arr=LinqArray.Helper.EnsureLinqArray(arr,true);
 		return arr.GroupJoin(this,action,arrAction,(a,b)=>{a,b},comp)
 			.SelectMany((item)=>item.b,(a,b)=>result(a.a,b));
 	}
@@ -54,7 +54,7 @@
 	RightJoin(arr,action,arrAction,result,comp=null){
 		action=LinqArray.Helper.EnsureValueGetter(action);
 		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		arr=LinqArray.Helper.EnsureLinqArray(arr);
+		arr=LinqArray.Helper.EnsureLinqArray(arr,true);
 		return arr.GroupJoin(this,arrAction,action,(a,b)=>{a,b},comp)
 			.SelectMany((item)=>item.b,(a,b)=>result(b,a.a));
 	}
@@ -73,7 +73,7 @@
 	FullJoin(arr,action,arrAction,leftResult,rightResult,comp=null){
 		action=LinqArray.Helper.EnsureValueGetter(action);
 		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		arr=LinqArray.Helper.EnsureLinqArray(arr);
+		arr=LinqArray.Helper.EnsureLinqArray(arr,true);
 		return this.LeftJoin(arr,action,arrAction,leftResult,comp).Union(this.RightJoin(arr,action,arrAction,rightResult,comp));
 	}
 

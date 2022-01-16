@@ -25,6 +25,7 @@ I tried to implement all basic LINQ functionality, and added some additional fun
 - `Execute` executes an action for each item, processes lazy and yields the return values (for use with `for` f.e.)
 - `ExecuteAsync` executes an asynchronous action for each item, processes lazy and yields the return values (for use with `for await` f.e.)
 - `ForEach` executes an action for each item (optional lazy in a new instance) (the return value may break the loop)
+- `ForEachAsync` executes an action for each item in place (the return value may break the loop)
 - `ToLinqArray` generates a lazy copy of the LINQ array contents (or optional a subset)
 - `ToArray` can optional create a subset
 - `Generate` allows you to use your own lazy item generator function
@@ -147,7 +148,7 @@ const linqArray=From(data);
 Later you could replace the stored data using the `SetData` or `SetAllData` methods, which will again consume the data trough a generator function:
 
 ```js
-linqArray.SetAllData(newDataArray);
+linqArray.SetAllData(newDataArray,true);
 ```
 
 You could also use a custom generator to initialize the LINQ array instance:

@@ -199,7 +199,7 @@
 		const self=this;
 		action=LinqArray.Helper.EnsureValueGetter(action);
 		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		arr=LinqArray.Helper.EnsureLinqArray(arr);
+		arr=LinqArray.Helper.EnsureLinqArray(arr,true);
 		return this._CreateGenerated(function*(){
 			let vA,
 				group,
@@ -492,7 +492,7 @@
 	Intersect(arr,comp=null){
 		const self=this;
 		return this._CreateGenerated(function*(){
-			if(comp) arr=LinqArray.Helper.EnsureLinqArray(arr,true);
+			if(comp) arr=LinqArray.Helper.EnsureLinqArray(arr);
 			const lenA=self.TryGetNonEnumeratedCount(),
 				lenB=LinqArray.Helper.GetArrayLength(arr),
 				a=lenA!=null&&lenB!=null&&lenA<lenB?self:arr,
@@ -1282,6 +1282,22 @@
 	}
 
 	/**
+	 * Execute an asynchronous action for each item IN PLACE
+	 * 
+	 * @param {callable} action Action (gets the item and the index as parameters, may return `false` to break the loop (and cut the resulting array, too!))
+	 * @return {LinqArray} This
+	 */
+	async ForEachAsync(action){
+		let index=0,
+			item;
+		for(item of this){
+			if(await action(item,index)===false) break;
+			index++;
+		}
+		return this;
+	}
+
+	/**
 	 * Convert to an array
 	 * 
 	 * @param {int} count (optional) Number of items to put into the array (default: `null` (=all))
@@ -1503,7 +1519,7 @@
 			res.#Store=this.#Store;
 			res.#PassStore=true;
 		}
-		if(data) res.SetAllData(data);
+		if(data) res.SetAllData(data,true);
 		return res;
 	}
 
@@ -1647,7 +1663,7 @@
 	static ExtendArray(){
 		if(!LinqArray.Helper.IsUndefined(Array.prototype.ToLinqArray)) return;
 		const linqArray=this;
-		Array.prototype.ToLinqArray=(count=null)=>count==null?new linqArray(this):new linqArray().SetAllData(this).Take(count);
+		Array.prototype.ToLinqArray=(count=null)=>count==null?new linqArray(this):new linqArray().SetAllData(this,true).Take(count);
 	}
 }
 
