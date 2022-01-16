@@ -50,6 +50,7 @@ I tried to implement all basic LINQ functionality, and added some additional fun
 - `Clear` clears the instance to the initial state (without any data)
 - `DisableStore` disable storing generated items in the array buffer (if it needs to iterate only once)
 - static `ExtendArray` extends the `Array` prototype by a `ToLinqArray` method
+- static `ExtendObject` extends an iterable object with LINQ methods (experimental!)
 - static `From` generates a new instance from an array or a LINQ array
 
 Some methods will have slightly different parameters (and parameter order) or they won't work exactly as the implementation of .NET. This is because JavaScript != .NET, and my goal was to create a lightweight LINQ-like implementation only, but not a 1:1 copy of the original. Anyway, all properties and each method, their parameters and return values are documented using common DocComment-blocks above them, so your IDE's context help should be able to support you while typing.
@@ -308,6 +309,9 @@ Feel free to load `linqext.js` or `linqext.min.js` for some more hopefully helpf
 - `Doubles` finds items that are included more than once (and returns them grouped)
 - `Replace` replaces an item with another item
 - static `FromCsv` parses a CSV data source
+- static `Fibonacci` creates an (almost) endless Fibonacci sequence (will crash when the maximum numeric value exceeded)
+- static `RandomInt` created an infinity sequence of random integer values
+- static `RandomArbitrary` created an infinity sequence of random numeric values
 
 The global `From` method will return a `LinqArrayExt` instead of a `LinqArray`.
 

@@ -21,7 +21,7 @@
 		IsLinqArray:(obj)=>obj instanceof LinqArray,
 		EnsureLinqArray:(arr,useGenerator=false)=>arr instanceof LinqArray?arr:(new LinqArray()).SetAllData(arr,useGenerator),
 		EnsureFinalArray:(arr)=>arr instanceof LinqArray?arr.EnsureGenerated():arr,
-		GetArrayLength:(arr)=>arr instanceof LinqArray?arr.EnsureGenerated().length:arr.length,
+		GetArrayLength:(arr)=>arr instanceof LinqArray?arr.EnsureGenerated()._Iterable.length:arr.length,
 		IsUndefined:(obj)=>typeof obj=='undefined',
 		IsFunction:(obj)=>typeof obj=='function',
 		IsString:(obj)=>typeof obj=='string',
@@ -97,6 +97,12 @@
 	 * @var {boolean}
 	 */
 	#PassStore=false;
+	/**
+	 * Extended object
+	 * 
+	 * @var {Iterable}
+	 */
+	#Extended=null;
 
 	/**
 	 * Get the version
@@ -134,19 +140,42 @@
 	get Store(){return this.#Store;}
 
 	/**
+	 * Get the extended object
+	 * 
+	 * @return {Iterable} Object
+	 */
+	get Extended(){return this.#Extended;}
+
+	/**
+	 * Get an iterable object of this instance
+	 * 
+	 * @return {Iterable} Iterable
+	 */
+	get _Iterable(){return this.#Extended??this;}
+
+	/**
 	 * Count items
 	 * 
 	 * @param {Function<any,bool>} action (optional) Filter action
 	 * @return {int} Number of items
 	 */
-	Count(action=null){return action?this.filter(item=>action(item)).length:this.TryGetNonEnumeratedCount()??this.EnsureGenerated().length;}
+	Count(action=null){
+		if(!action){
+			if(this.#EstimatedCount!=null) return this.#EstimatedCount;
+			if(this.#Extended) return this.#Extended.length;
+			if(this.#IsGenerated) return this.length;
+		}else if(this.#Extended){
+			return this.Where(action).Count();
+		}
+		return this.filter(item=>action(item)).length;
+	}
 
 	/**
 	 * Determine if this array is empty
 	 * 
 	 * @return {boolean} Is empty?
 	 */
-	IsEmpty(){return this[Symbol.iterator]().next().done;}
+	IsEmpty(){return this._GetIterator().next().done;}
 
 	/**
 	 * Determine if an item is contained
@@ -155,7 +184,10 @@
 	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {boolean} Contains the item?
 	 */
-	Contains(item,comp=null){return comp?this.Any((b)=>comp(item,b)):this.Any((b)=>item==b);}
+	Contains(item,comp=null){
+		if(!comp) return this.#Extended?this.Any(i=>item==i):this.includes(item);
+		return this.Any(i=>comp(item,i));
+	}
 
 	/**
 	 * Join this array with another array by their common keys
@@ -175,7 +207,7 @@
 			let vA,
 				a,
 				b;
-			for(a of self){
+			for(a of self._Iterable){
 				vA=action(a);
 				for(b of arr){
 					if(comp?!comp(vA,arrAction(b)):vA!=arrAction(b)) continue;
@@ -205,7 +237,7 @@
 				group,
 				a,
 				b;
-			for(a of self){
+			for(a of self._Iterable){
 				vA=action(a);
 				group=arr.Where((item)=>comp?comp(vA,arrAction(item)):vA==arrAction(item));
 				for(b of arr) yield result(a,group,vA);
@@ -224,7 +256,7 @@
 		return this._CreateGenerated(function*(){
 			let index=0,
 				item;
-			for(item of self){
+			for(item of self._Iterable){
 				if(action(item,index)) yield item;
 				index++;
 			}
@@ -264,10 +296,10 @@
 	Distinct(comp=null){
 		const self=this;
 		return this._CreateGenerated(function*(){
-			const values=new LinqArray();
+			const values=comp?new LinqArray():[];
 			let item;
-			for(item of self){
-				if(values.Contains(item,comp)) continue;
+			for(item of self._Iterable){
+				if(comp?values.Contains(item,comp):values.includes(item)) continue;
 				yield item;
 				values.push(item);
 			}
@@ -284,13 +316,13 @@
 	DistinctBy(action,comp=null){
 		const self=this;
 		return this._CreateGenerated(function*(){
-			const values=new LinqArray();
+			const values=comp?new LinqArray():[];
 			action=LinqArray.Helper.EnsureValueGetter(action);
 			let value,
 				item;
-			for(item of self){
+			for(item of self._Iterable){
 				value=action(item);
-				if(comp?values.Any((b)=>comp(item,b)):values.includes(value)) continue;
+				if(comp?values.Contains(value,comp):values.includes(value)) continue;
 				yield item;
 				values.push(value);
 			}
@@ -341,7 +373,7 @@
 				item;
 			for(item of arr){
 				value=action(item);
-				if(comp?values.Any((b)=>comp(value,b)):values.Contains(value)) continue;
+				if(values.Contains(value,comp)) continue;
 				yield item;
 				values.push(value);
 			}
@@ -360,8 +392,9 @@
 		const self=this;
 		action=LinqArray.Helper.EnsureValueGetter(action);
 		return this._CreateGenerated(function*(){
-			let index=0;
-			for(const item of self){
+			let index=0,
+				item;
+			for(item of self._Iterable){
 				yield action(item,index);
 				index++;
 			}
@@ -383,7 +416,7 @@
 				selected,
 				i;
 			selector=LinqArray.Helper.EnsureValueGetter(selector);
-			for(item of self){
+			for(item of self._Iterable){
 				if(result){
 					for(selected of selector(item,index))
 						for(i of selected)
@@ -410,7 +443,7 @@
 			lenB=LinqArray.Helper.GetArrayLength(arr),
 			lenC=isSeq?LinqArray.Helper.GetArrayLength(action):null;
 		this.EnsureGenerated(lenC==null?lenB:Math.min(lenB,lenC));
-		const len=isSeq?Math.min(this.length,lenB,lenC):Math.min(this.length,lenB);
+		const len=isSeq?Math.min(this._Iterable.length,lenB,lenC):Math.min(this._Iterable.length,lenB);
 		return this._CreateGenerated(function*(){
 			for(let i=0;i<len;i++)
 				if(isSeq){
@@ -433,7 +466,7 @@
 		const self=this;
 		return this._CreateGenerated(function*(){
 			let item;
-			for(item of self) if(typeof item==type) yield item;
+			for(item of self._Iterable) if(typeof item==type) yield item;
 		}());
 	}
 
@@ -449,7 +482,7 @@
 		return this._CreateGenerated(function*(){
 			const isLinq=LinqArray.Helper.IsLinqArray(exclude);
 			let item;
-			for(item of self)
+			for(item of self._Iterable)
 				if(comp
 					?!(isLinq?exclude.Any((b)=>comp(item,b)):exclude.some((b)=>comp(item,b)))
 					:!(isLinq?exclude.Contains(item):exclude.includes(item)))
@@ -472,7 +505,7 @@
 			action=LinqArray.Helper.EnsureValueGetter(action);
 			let k,
 				item;
-			for(item of self){
+			for(item of self._Iterable){
 				k=action(item);
 				if(comp
 					?!(isLinq?exclude.Any((b)=>comp(k,action(b))):exclude.some((b)=>comp(k,action(b))))
@@ -547,12 +580,12 @@
 	 */
 	First(action=null){
 		if(!action){
-			const first=this[Symbol.iterator]().next();
+			const first=this._GetIterator().next();
 			if(first.done) throw new Error('No item');
 			return first.value;
 		}
 		let item;
-		for(item of this) if(action(item)) return item;
+		for(item of this._Iterable) if(action(item)) return item;
 		throw new Error('No item');
 	}
 
@@ -566,25 +599,25 @@
 	FirstOrDefault(action,defaultResult=null){
 		[action,defaultResult]=this.#EnsureActionOrDefaultResult(action,defaultResult);
 		if(!action){
-			const first=this[Symbol.iterator]().next();
+			const first=this._GetIterator().next();
 			return first.done?defaultResult:first.value;
 		}
 		let item;
-		for(item of this) if(action(item)) return item;
+		for(item of this._Iterable) if(action(item)) return item;
 		return defaultResult;
 	}
 
 	/**
 	 * Get the last item
 	 * 
-	 * @param {Function<any,boolean>} action (option) Filter action
+	 * @param {Function<any,boolean>} action (optional) Filter action
 	 * @return {any} Last item
 	 */
 	Last(action=null){
 		if(!action){
-			const len=this.EnsureGenerated().length;
+			const len=this.EnsureGenerated()._Iterable.length;
 			if(!len) throw new Error('No item');
-			return this[len-1];
+			return this._Iterable[len-1];
 		}
 		let item;
 		for(item of this.EnsureGenerated().slice().reverse()) if(action(item)) return item;
@@ -600,7 +633,7 @@
 	 */
 	LastOrDefault(action,defaultResult=null){
 		[action,defaultResult]=this.#EnsureActionOrDefaultResult(action,defaultResult);
-		if(!action) return this.EnsureGenerated().length?this[this.length-1]:defaultResult;
+		if(!action) return this.EnsureGenerated()._Iterable.length?this._Iterable[this._Iterable.length-1]:defaultResult;
 		let item;
 		for(item of this.EnsureGenerated().slice().reverse()) if(action(item)) return item;
 		return defaultResult;
@@ -614,9 +647,9 @@
 	 */
 	Single(action=null){
 		if(!action)
-			switch(this.EnsureGenerated(2).length){
+			switch(this.EnsureGenerated(2)._Iterable.length){
 				case 0:throw new Error('No item');
-				case 1:return this[0];
+				case 1:return this._Iterable[0];
 				default:throw new Error('Many items');
 			}
 		let res,
@@ -659,8 +692,8 @@
 	ElementAt(index){
 		if(index<0) index=this.Count()-index;
 		this.EnsureGenerated(index+1);
-		if(index<0||index>=this.length) throw new Error('Invalid index');
-		return this[index];
+		if(index<0||index>=this._Iterable.length) throw new Error('Invalid index');
+		return this._Iterable[index];
 	}
 
 	/**
@@ -673,7 +706,7 @@
 	ElementAtOrDefault(index,defaultResult=null){
 		if(index<0) index=this.Count()-index;
 		this.EnsureGenerated(index+1);
-		return index<0||index>=this.length?defaultResult:this[index];
+		return index<0||index>=this._Iterable.length?defaultResult:this._Iterable[index];
 	}
 
 	/**
@@ -682,7 +715,7 @@
 	 * @param {any} defaultItem Default item
 	 * @return {LinqArray} This or a new LINQ array with the default item
 	 */
-	DefaultIfEmpty(defaultItem){return this[Symbol.iterator]().next().done?this._CreateInstance([defaultItem]):this;}
+	DefaultIfEmpty(defaultItem){return this._GetIterator().next().done?this._CreateInstance([defaultItem]):this;}
 
 	/**
 	 * Order
@@ -792,7 +825,7 @@
 	 * 
 	 * @return {int} Count or `null` (if an enumeration is required, first)
 	 */
-	TryGetNonEnumeratedCount(){return this.#IsGenerated?this.length:this.#EstimatedCount;}
+	TryGetNonEnumeratedCount(){return this.#IsGenerated?this._Iterable.length:this.#EstimatedCount;}
 
 	/**
 	 * Skip X items
@@ -805,7 +838,7 @@
 		if(count<1) return this.ToLinqArray();
 		const self=this;
 		return this._CreateGenerated(function*(){
-			const generator=self[Symbol.iterator]();
+			const generator=self._GetIterator();
 			let item;
 			for(;count&&!(item=generator.next()).done;count--);
 			if(!item.done) yield* generator;
@@ -821,10 +854,10 @@
 	SkipLast(count=1){
 		if(!count) return this.ToLinqArray();
 		const self=this.EnsureGenerated();
-		return count=this.length-count?this._CreateGenerated(function*(){
-			const generator=self[Symbol.iterator]();
+		return count=this._Iterable.length-count?this._CreateGenerated(function*(){
+			const generator=self._GetIterator();
 			for(let item;count&&!(item=generator.next()).done;count--) yield item.value;
-		}(),Math.max(0,this.length-count)):this._CreateInstance();
+		}(),Math.max(0,this._Iterable.length-count)):this._CreateInstance();
 	}
 
 	/**
@@ -842,7 +875,7 @@
 	 * @return {...any} Items
 	 */
 	*GetWhenNot(action){
-		const generator=this[Symbol.iterator]();
+		const generator=this._GetIterator();
 		let item;
 		for(item=generator.next();!item.done&&action(item.value);item=generator.next());
 		if(!item.done){
@@ -863,7 +896,7 @@
 		const self=this,
 			estimatedCount=this.TryGetNonEnumeratedCount();
 		return this._CreateGenerated(function*(){
-			const generator=self[Symbol.iterator]();
+			const generator=self._GetIterator();
 			for(let item;count&&!(item=generator.next()).done;count--) yield item;
 		}(),estimatedCount==null?null:Math.max(0,Math.min(estimatedCount,count)));
 	}
@@ -876,7 +909,7 @@
 	 */
 	TakeLast(count){
 		if(!count) return this._CreateInstance();
-		const len=this.EnsureGenerated().length;
+		const len=this.EnsureGenerated()._Iterable.length;
 		switch(true){
 			case !len:return this._CreateInstance();
 			case len<count:return this.ToLinqArray();
@@ -899,7 +932,7 @@
 	 * @return {...any} Items
 	 */
 	*GetWhile(action){
-		const generator=this[Symbol.iterator]();
+		const generator=this._GetIterator();
 		for(let item=generator.next();!item.done&&action(item.value);item=generator.next()) yield item.value;
 	}
 
@@ -923,7 +956,7 @@
 			estimatedCount=isFinalArray?this.TryGetNonEnumeratedCount():null;
 		return !isFinalArray||items.length?this._CreateGenerated(function*(){
 			let item;
-			for(item of self) yield item;
+			for(item of self._Iterable) yield item;
 			yield* items[Symbol.iterator]();
 		}(),estimatedCount==null?null:estimatedCount+items.length):this.ToLinqArray();
 	}
@@ -947,7 +980,7 @@
 		if(isFinalArray&&!items.length) return this;
 		this.EnsureGenerated().#IsGenerated=false;
 		this.#Generator=function*(){yield* items[Symbol.iterator]();}();
-		this.#EstimatedCount=isFinalArray?this.length+items.length:null;
+		this.#EstimatedCount=isFinalArray?this._Iterable.length+items.length:null;
 		return this;
 	}
 
@@ -972,7 +1005,7 @@
 		return !isFinalArray||items.length?this._CreateGenerated(function*(){
 			let item;
 			for(item of items) yield item;
-			yield* self[Symbol.iterator]();
+			yield* self._GetIterator();
 		}(),estimatedCount==null?null:estimatedCount+items.length):this.ToLinqArray();
 	}
 
@@ -1017,7 +1050,7 @@
 			res=this._CreateGenerated(function*(){
 				let item,
 					arr;
-				for(item of self) yield item;
+				for(item of self._Iterable) yield item;
 				if(!arrs.some(item=>LinqArray.Helper.IsLinqArray(item)&&!item.IsGenerated))
 					res.#EstimatedCount=res.length+arrs.map(i=>i.length).reduce((total,current)=>total+current,0);
 				for(arr of arrs)
@@ -1051,7 +1084,7 @@
 					yield item;
 		}();
 		this.#EstimatedCount=!arrs.some(item=>LinqArray.Helper.IsLinqArray(item)&&!item.IsGenerated)
-			?this.length+arrs.map(i=>i.length).reduce((total,current)=>total+current,0)
+			?this._Iterable.length+arrs.map(i=>i.length).reduce((total,current)=>total+current,0)
 			:null;
 		return this;
 	}
@@ -1066,7 +1099,7 @@
 		const self=this,
 			estimatedCount=this.TryGetNonEnumeratedCount();
 		return this._CreateGenerated(function*(){
-			const generator=self[Symbol.iterator]();
+			const generator=self._GetIterator();
 			for(let item={done:false},data;!item.done;){
 				data=[];
 				for(;data.length<count&&!(item=generator.next()).done;data.push(item.value));
@@ -1090,7 +1123,7 @@
 	 * @return {number} Maximum value
 	 */
 	Max(action=null){
-		switch(this.EnsureGenerated().length){
+		switch(this.EnsureGenerated()._Iterable.length){
 			case 0:throw new Error('No items');
 			case 1:return this.First();
 			default:return Math.max(...(action==null?this:this.Select(action)));
@@ -1104,7 +1137,7 @@
 	 * @return {any} Item with the maximum
 	 */
 	MaxBy(action){
-		switch(this.EnsureGenerated().length){
+		switch(this.EnsureGenerated()._Iterable.length){
 			case 0:throw new Error('No items');
 			case 1:return this.First();
 		}
@@ -1113,7 +1146,7 @@
 			v,
 			item;
 		action=LinqArray.Helper.EnsureValueGetter(action);
-		for(item of this){
+		for(item of this._Iterable){
 			v=action(item);
 			if(v==Number.MAX_VALUE) return item;
 			if(max!=null&&v<=max) continue;
@@ -1130,7 +1163,7 @@
 	 * @return {number} Minimum value
 	 */
 	Min(action=null){
-		switch(this.EnsureGenerated().length){
+		switch(this.EnsureGenerated()._Iterable.length){
 			case 0:throw new Error('No items');
 			case 1:return this.First();
 			default:return Math.min(...(action==null?this:this.Select(action)));
@@ -1144,7 +1177,7 @@
 	 * @return {any} Item with the minimum
 	 */
 	MinBy(action){
-		switch(this.EnsureGenerated().length){
+		switch(this.EnsureGenerated()._Iterable.length){
 			case 0:throw new Error('No items');
 			case 1:return this.First();
 		}
@@ -1153,7 +1186,7 @@
 			v,
 			item;
 		action=LinqArray.Helper.EnsureValueGetter(action);
-		for(item of this){
+		for(item of this._Iterable){
 			v=action(item);
 			if(v==Number.MIN_VALUE) return item;
 			if(min!=null&&v>=min) continue;
@@ -1179,7 +1212,7 @@
 	 */
 	Average(action=null){
 		const sum=this.Sum(action),
-			len=this.length;
+			len=this._Iterable.length;
 		return len?sum/len:0;
 	}
 
@@ -1192,12 +1225,12 @@
 	 * @return {boolean} Is equal?
 	 */
 	SequenceEqual(arr,comp=null,strict=false){
-		const len=this.EnsureGenerated().length;
+		const len=this.EnsureGenerated()._Iterable.length;
 		if(len!=LinqArray.Helper.GetArrayLength(arr)) return false;
 		if(!len) return true;
 		if(!comp) comp=(a,b)=>(!strict&&a==b)||(strict&&a===b);
 		arr=LinqArray.Helper.EnsureFinalArray(arr);
-		for(let i=0;i<len;i++) if(!comp(this[i],arr[i],strict)) return false;
+		for(let i=0;i<len;i++) if(!comp(this._Iterable[i],arr[i],strict)) return false;
 		return true;
 	}
 
@@ -1210,10 +1243,10 @@
 	 * @return {any} Result
 	 */
 	Aggregate(action,seed=undefined,result=null){
-		const len=this.EnsureGenerated().length;
+		const len=this.EnsureGenerated()._Iterable.length;
 		if(!len) return result?result(seed):seed;
 		if(LinqArray.Helper.IsUndefined(seed)){
-			if(len==1) return result?result(this[0]):this[0];
+			if(len==1) return result?result(this._Iterable[0]):this._Iterable[0];
 			let first=true;
 			this.ForEach(item=>{
 				if(first){
@@ -1237,7 +1270,7 @@
 	 */
 	*Execute(action){
 		let item;
-		for(item of this) yield action(item);
+		for(item of this._Iterable) yield action(item);
 	}
 
 	/**
@@ -1248,7 +1281,7 @@
 	 */
 	async *ExecuteAsync(action){
 		let item;
-		for(item of this) yield await action(item);
+		for(item of this._Iterable) yield await action(item);
 	}
 
 	/**
@@ -1263,7 +1296,7 @@
 		if(inPlace){
 			let index=0,
 				item;
-			for(item of this){
+			for(item of this._Iterable){
 				if(action(item,index)===false) break;
 				index++;
 			}
@@ -1273,7 +1306,7 @@
 			:this._CreateGenerated(function*(){
 				let index=0,
 					item;
-				for(item of self){
+				for(item of self._Iterable){
 					if(action(item,index)===false) break;
 					yield item;
 					index++;
@@ -1290,7 +1323,7 @@
 	async ForEachAsync(action){
 		let index=0,
 			item;
-		for(item of this){
+		for(item of this._Iterable){
 			if(await action(item,index)===false) break;
 			index++;
 		}
@@ -1343,7 +1376,7 @@
 		return new Map(function*(){
 			let k,
 				item;
-			for(item of self){
+			for(item of self._Iterable){
 				k=key(item);
 				yield [k,value?value(item,k):item];
 			}
@@ -1361,7 +1394,7 @@
 		if(value!=null) value=LinqArray.Helper.EnsureValueGetter(value);
 		const res=new Set(value?function*(){
 			let item;
-			for(item of self) yield value?value(item,res):item;
+			for(item of self._Iterable) yield value?value(item,res):item;
 		}():this);
 		return res;
 	}
@@ -1405,7 +1438,7 @@
 	 * @return {LinqArray} This
 	 */
 	EnsureGenerated(until=null){
-		if(this.#IsGenerated||!this.#Generator||(until&&this.length>=until)) return this;
+		if(this.#Extended||this.#IsGenerated||!this.#Generator||(until&&this.length>=until)) return this;
 		if(!this.#Store) throw new Error('Storing was disabled');
 		const generator=this.#Generator;
 		let item=null;
@@ -1465,7 +1498,7 @@
 	 * @return {LinqArray} This
 	 */
 	Clear(){
-		if(this.length) this.length=0;
+		if(!this.#Extended&&this.length) this.length=0;
 		this.#OrderAction=null;
 		this.#Ordering=null;
 		this.#OrderDescending=null;
@@ -1473,7 +1506,7 @@
 		this.#IsGenerated=true;
 		this.#EstimatedCount=null;
 		this.#Generator=null;
-		this.#Store=true;
+		this.#Store=!this.#Extended;
 		return this;
 	}
 
@@ -1540,6 +1573,13 @@
 	}
 
 	/**
+	 * Get an iterator
+	 * 
+	 * @return {Iterator} Iterator
+	 */
+	_GetIterator(){return this._Iterable[Symbol.iterator]();}
+
+	/**
 	 * Ensure having an action or a default result
 	 * 
 	 * @param {any} action Action
@@ -1561,20 +1601,24 @@
 	 * @return {...any} Items
 	 */
 	*[Symbol.iterator](){
-		const generator=this.#Generator,
-			superGenerator=super[Symbol.iterator]();
-		if(!generator){
-			if(!this.#Store) throw new Error('Iterated already - buffer is disabled');
-			yield* superGenerator;
-		}else if(generator){
-			if(superGenerator) for(let item=superGenerator.next();!item.done;item=superGenerator.next()) yield item.value;
-			for(let item=generator.next();!item.done;item=generator.next()){
-				if(this.#Store) this.push(item.value);
-				yield item.value;
+		if(this.#Extended){
+			yield* this.#Extended[Symbol.iterator];
+		}else{
+			const generator=this.#Generator,
+				superGenerator=super[Symbol.iterator]();
+			if(!generator){
+				if(!this.#Store) throw new Error('Iterated already - buffer is disabled');
+				yield* superGenerator;
+			}else if(generator){
+				if(superGenerator) for(let item=superGenerator.next();!item.done;item=superGenerator.next()) yield item.value;
+				for(let item=generator.next();!item.done;item=generator.next()){
+					if(this.#Store) this.push(item.value);
+					yield item.value;
+				}
+				this.#Generator=null;
+				this.#IsGenerated=true;
+				this.#EstimatedCount=null;
 			}
-			this.#Generator=null;
-			this.#IsGenerated=true;
-			this.#EstimatedCount=null;
 		}
 	}
 
@@ -1665,6 +1709,36 @@
 		if(!LinqArray.Helper.IsUndefined(Array.prototype.ToLinqArray)) return;
 		const linqArray=this;
 		Array.prototype.ToLinqArray=(count=null)=>count==null?new linqArray(this):new linqArray().SetAllData(this,true).Take(count);
+	}
+
+	/**
+	 * Extend an iterable object with LINQ array methods
+	 * 
+	 * **NOTE**: Existing keys won't be overwritten! `Array` methods and properties of the returned LINQ array won't work.
+	 * 
+	 * @param {Iterable} obj Object
+	 * @return {LinqArray} LINQ array
+	 */
+	static ExtendObject(obj){
+		//TODO In this case don't use any Array methods/properties!
+		const linq=new this(obj,false),
+			map=new Map(Object.entries(obj));
+		let k,
+			v;
+		linq.#Extended=obj;
+		for([k,v] of Object.entries(linq)){
+			if(
+				/^[_|\#|a-z]/.test(k)||
+				!LinqArray.Helper.IsFunction(v)||
+				v instanceof AsyncFunction||
+				v instanceof GeneratorFunction||
+				map.kas(k)||
+				!(v.prototype instanceof LinqArray)
+				)
+				continue;
+			obj[k]=(...args)=>linq[k](...args);
+		}
+		return linq;
 	}
 }
 

@@ -172,7 +172,7 @@
 	TakeRandom(){
 		const len=this.EnsureGenerated().length;
 		if(!len) throw new Error('No items');
-		return this[Math.floor(Math.random()*len)];
+		return this.ElementAt(Math.floor(Math.random()*len));
 	}
 
 	/**
@@ -215,7 +215,7 @@
 			res=inPlace?null:this._CreateGenerated(function*(){
 				let index=0,
 					item;
-				for(item of self){
+				for(item of self._Iterable){
 					if((sFnc&&search(item))||(!sFnc&&(comp?comp(search,item):search==item))) res[index]=rFnc?replace(item):replace;
 					index++;
 				}
@@ -223,8 +223,8 @@
 		if(inPlace){
 			let index=0,
 				item;
-			for(item of this){
-				if((sFnc&&search(item))||(!sFnc&&(comp?comp(search,item):search==item))) this[index]=rFnc?replace(item):replace;
+			for(item of this._Iterable){
+				if((sFnc&&search(item))||(!sFnc&&(comp?comp(search,item):search==item))) this._Iterable[index]=rFnc?replace(item):replace;
 				index++;
 			}
 		}
@@ -259,11 +259,11 @@
 		return (new this()).Generate(function*(){
 			let prev,
 				row=[prev=''],
-				col=0,
+				col,
 				stream=true,
 				c,
 				item,
-				index=0;
+				index=col=0;
 			for(c of csv){
 				if(c==stringDelimiter){
 					if(!(stream=!stream)&&c==prev) row[col]+=c;
@@ -293,6 +293,47 @@
 				prev=c;
 			}
 		}(),Math.max(0,csv.trim().split("\n").length-(header?1:0)));
+	}
+
+	/**
+	 * Generate a fibonacci sequence (won't store generated values!)
+	 * 
+	 * @param {number} pp (optional) A (default: `0`)
+	 * @param {number} p (optional) B (default: `1`)
+	 * @return {LinqArrayExt} LINQ array with the generated sequence
+	 */
+	static Fibonacci(pp=0,p=1){
+		return (new this()).Generate(function*(){
+			for(let next=pp+p;;pp=p,p=next,next=pp+p) yield next;
+		}(),Number.POSITIVE_INFINITY).DisableStore();
+	}
+
+	/**
+	 * Generate a random integer sequence (won't store generated values!)
+	 * 
+	 * @param {int} minIncluding (optional) Minimum including
+	 * @param {int} maxIncluding (optional) Maximum excluding
+	 * @return {LinqArrayExt} LINQ array with the generated sequence
+	 */
+	static RandomInt(minIncluding=Number.MIN_SAFE_INTEGER,maxExcluding=Number.MAX_SAFE_INTEGER){
+		minIncluding=Math.ceil(minIncluding);
+		maxExcluding=Math.floor(maxExcluding);
+		return (new this()).Generate(function*(){
+			for(;;) yield Math.floor(Math.random()*(maxExcluding-minIncluding))+minIncluding;
+		}(),Number.POSITIVE_INFINITY).DisableStore();
+	}
+
+	/**
+	 * Generate a random arbitrary sequence (won't store generated values!)
+	 * 
+	 * @param {number} minIncluding (optional) Minimum including
+	 * @param {number} maxIncluding (optional) Maximum excluding
+	 * @return {LinqArrayExt} LINQ array with the generated sequence
+	 */
+	static RandomArbitrary(minIncluding=Number.MIN_VALUE,maxExcluding=Number.MAX_VALUE){
+		return (new this()).Generate(function*(){
+			for(;;) yield Math.random()*(maxExcluding-minIncluding)+minIncluding;
+		}(),Number.POSITIVE_INFINITY).DisableStore();
 	}
 
 	/**
