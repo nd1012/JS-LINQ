@@ -270,7 +270,7 @@ For ordering items you may specify a custom sorting comparer callback, that will
 - Optional original object A
 - Optional original object B
 
-The method needs to return, if A is greater than, lower than or equal to B:
+The method needs to return if A is greater than, lower than or equal to B:
 
 - `-1`: A is lower than B
 - `0`: A equals B
@@ -288,7 +288,7 @@ For comparing two objects you may use a custom comparer callback, that will get 
 - Object B
 - Optional if strict comparsion was requested
 
-The method needs to return, if A and B are equal (`true` or `false`).
+The method needs to return if A and B are equal (`true` or `false`).
 
 **NOTE**: Asynchronous functions aren't supported!
 
