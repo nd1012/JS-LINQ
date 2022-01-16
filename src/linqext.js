@@ -16,12 +16,7 @@
 	 * @param {Function<any,any,boolean>} comp (optional) Key comparing action
 	 * @return {LinqArrayExt} Resulting LINQ array
 	 */
-	InnerJoin(arr,action,arrAction,result=null,comp=null){
-		action=LinqArray.Helper.EnsureValueGetter(action);
-		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		if(!result) result=(a,b)=>({...a,...b});
-		return this.Join(arr,action,arrAction,result,comp);
-	}
+	InnerJoin(arr,action,arrAction,result=null,comp=null){return this.Join(arr,action,arrAction,result??((a,b)=>({...a,...b})),comp);}
 
 	/**
 	 * Left join this array with another array by their common keys
@@ -34,10 +29,8 @@
 	 * @return {LinqArrayExt} Resulting LINQ array
 	 */
 	LeftJoin(arr,action,arrAction,result,comp=null){
-		action=LinqArray.Helper.EnsureValueGetter(action);
-		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		arr=LinqArray.Helper.EnsureLinqArray(arr,true);
-		return arr.GroupJoin(this,action,arrAction,(a,b)=>{a,b},comp)
+		return LinqArray.Helper.EnsureLinqArray(arr,true)
+			.GroupJoin(this,action,arrAction,(a,b)=>{a,b},comp)
 			.SelectMany((item)=>item.b,(a,b)=>result(a.a,b));
 	}
 
@@ -52,10 +45,8 @@
 	 * @return {LinqArrayExt} Resulting LINQ array
 	 */
 	RightJoin(arr,action,arrAction,result,comp=null){
-		action=LinqArray.Helper.EnsureValueGetter(action);
-		arrAction=LinqArray.Helper.EnsureValueGetter(arrAction);
-		arr=LinqArray.Helper.EnsureLinqArray(arr,true);
-		return arr.GroupJoin(this,arrAction,action,(a,b)=>{a,b},comp)
+		return LinqArray.Helper.EnsureLinqArray(arr,true)
+			.GroupJoin(this,arrAction,action,(a,b)=>{a,b},comp)
 			.SelectMany((item)=>item.b,(a,b)=>result(b,a.a));
 	}
 
@@ -89,12 +80,27 @@
 	/**
 	 * Create a partition table
 	 * 
-	 * **NOTE**: The contents of this instance needs to be an array of LINQ arrays (having all items generated), as it will be returned from `GroupBy`!
+	 * **NOTE**: There'll be a partition without `GroupKey` that contains all items that didn't match into a partition.
 	 * 
-	 * @param {string} rowKey Row key property name
-	 * @return {LinqArrayExt} Partition table
+	 * @param {...object} partitions Partition informations (as returned from `LinqArrayExt.PartitionInfo`)
+	 * @return {LinqArrayExt} LINQ array of LINQ array partitions
 	 */
-	Partition(rowKey){return this.SelectMany((item)=>item.Zip(LinqArray.Range(1,item.length),(j,i)=>({...j,[rowKey]:i})));}
+	Partition(...partitions){
+		const linqArrayExt=this.constructor,
+			res=LinqArrayExt.Repeat(i=>i==partitions.length?new linqArrayExt():new linqArrayExt()._SetGroupKey(partitions[i].key),partitions.length+1).EnsureGenerated();
+		let item,
+			i,
+			match;
+		for(item of this){
+			for(i=0,match=false;!match&&i<partitions.length;i++){
+				if((partitions[i].max&&res[i].length>=partitions[i].max)||!partitions[i].action(item)) continue;
+				res[i].push(item);
+				match=true;
+			}
+			if(!match) res.Last().push(item);
+		}
+		return res;
+	}
 
 	/**
 	 * Create a pivot table or summaries
@@ -432,6 +438,16 @@
 	 * @return {object} Pivot column configuration
 	 */
 	static PivotCalcColumn(key,data){return {key,group:null,data};}
+
+	/**
+	 * Create a partition information
+	 * 
+	 * @param {string} key Partition key
+	 * @param {Function<any,boolean>} action Filter action
+	 * @param {int} max (optional) Maximum number of items to store
+	 * @return {object} Partition information
+	 */
+	static PartitionInfo(key,action,max=null){return{key,action,max};}
 }
 
 // Override the global `From` function to generate a LINQ array extensions object from now on

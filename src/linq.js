@@ -140,6 +140,13 @@
 	get Store(){return this.#Store;}
 
 	/**
+	 * Get if created instances won't store generated items, too
+	 * 
+	 * @return {boolean} Pass disabled storing to new instances?
+	 */
+	get Pass(){return this.#Pass;}
+
+	/**
 	 * Get the extended object
 	 * 
 	 * @return {Iterable} Object
@@ -1580,6 +1587,17 @@
 	_GetIterator(){return this._Iterable[Symbol.iterator]();}
 
 	/**
+	 * Set the group key
+	 * 
+	 * @param {any} key Key
+	 * @return {LinqArray} This
+	 */
+	_SetGroupKey(key){
+		this.#GroupKey=key;
+		return this;
+	}
+
+	/**
 	 * Ensure having an action or a default result
 	 * 
 	 * @param {any} action Action
@@ -1686,16 +1704,17 @@
 	/**
 	 * Repeat an element
 	 * 
-	 * @param {any} e Element
+	 * @param {any|Function<int,any>} e Element or action that returns an element (gets the index as parameter)
 	 * @param {int} count Count
 	 * @param {boolean} store (optional) Store generated items (default: `true`)?
 	 * @param {boolean} pass (optional) Pass this behavior to created instances?
 	 * @return {LinqArray} LINQ array
 	 */
 	static Repeat(e,count,store=true,pass=false){
-		const res=new this(null,store,pass);
+		const res=new this(null,store,pass),
+			isFnc=LinqArray.Helper.IsFunction(e);
 		res.#IsGenerated=false;
-		res.#Generator=function*(){for(let i=0;i<count;i++) yield e;}();
+		res.#Generator=function*(){for(let i=0;i<count;i++) yield isFnc?e(i):e;}();
 		res.#EstimatedCount=count;
 		return res;
 	}
