@@ -144,7 +144,7 @@
 	 * 
 	 * @return {boolean} Pass disabled storing to new instances?
 	 */
-	get Pass(){return this.#Pass;}
+	get PassStore(){return this.#PassStore;}
 
 	/**
 	 * Get the extended object
