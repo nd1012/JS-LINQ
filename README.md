@@ -291,7 +291,7 @@ The method needs to return, if A and B are equal (`true` or `false`).
 
 ## Useful LINQ extensions
 
-Feel free to load `linqext.js` or `linqext.min.js` for some more hopefully helpful LINQ methods in the `LinqArrayExt` type:
+Feel free to load `linqext.js` or `linqext.min.js` in addition for some more hopefully helpful LINQ methods in the `LinqArrayExt` type:
 
 - `InnerJoin`
 - `LeftJoin`
@@ -309,7 +309,7 @@ Feel free to load `linqext.js` or `linqext.min.js` for some more hopefully helpf
 - `Doubles` finds items that are included more than once (and returns them grouped)
 - `Replace` replaces an item with another item
 - static `FromCsv` parses a CSV data source
-- static `Fibonacci` creates an (almost) endless Fibonacci sequence (will crash when the maximum numeric value exceeded)
+- static `Fibonacci` creates an (almost) endless Fibonacci sequence (will crash when it exceeds the maximum numeric value)
 - static `RandomInt` created an infinity sequence of random integer values
 - static `RandomArbitrary` created an infinity sequence of random numeric values
 
