@@ -46,13 +46,13 @@
 	/**
 	 * Order action
 	 * 
-	 * @var {callable}
+	 * @var {Function<any,int,any>}
 	 */
 	#OrderAction=null;
 	/**
 	 * Ordering action
 	 * 
-	 * @var {callable}
+	 * @var {Function<any,any,boolean,any,any,int>}
 	 */
 	#Ordering=null;
 	/**
@@ -70,7 +70,7 @@
 	/**
 	 * Running generator of this instance
 	 * 
-	 * @var {callable}
+	 * @var {Iterator}
 	 */
 	#Generator=null;
 	/**
@@ -136,7 +136,7 @@
 	/**
 	 * Count items
 	 * 
-	 * @param {callable} action (optional) Filter action (get the item as parameter and needs to return if to count that item)
+	 * @param {Function<any,bool>} action (optional) Filter action
 	 * @return {int} Number of items
 	 */
 	Count(action=null){return action?this.filter(item=>action(item)).length:this.TryGetNonEnumeratedCount()??this.EnsureGenerated().length;}
@@ -152,7 +152,7 @@
 	 * Determine if an item is contained
 	 * 
 	 * @param {any} item Item
-	 * @param {action} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {boolean} Contains the item?
 	 */
 	Contains(item,comp=null){return comp?this.Any((b)=>comp(item,b)):this.Any((b)=>item==b);}
@@ -161,10 +161,10 @@
 	 * Join this array with another array by their common keys
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable|string} action Key returning action (gets the item and needs to return the key) or item key name
-	 * @param {callable|string} arrAction Key returning action (gets the array item and needs to return the key) or array item key name
-	 * @param {callable} result Value returning action (gets the item and the array item as parameters and needs to return the final result to use)
-	 * @param {callable} comp (optional) Key comparing action (gets keys A and B as parameters and needs to return if they're equal)
+	 * @param {Function<any,any>|string} action Key action or item property name
+	 * @param {Function<any,any>|string} arrAction Key action or array item property name
+	 * @param {Function<any,any,any>} result Value returning action (gets the item and the array item as parameters and needs to return the final result to use)
+	 * @param {Function<any,any,boolean>} comp (optional) Key comparer action
 	 * @return {LinqArray} Resulting LINQ array
 	 */
 	Join(arr,action,arrAction,result,comp=null){
@@ -189,10 +189,10 @@
 	 * Group join this array with another array by their common keys
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable|string} action Key returning action (gets the item and needs to return the key) or item key name
-	 * @param {callable|string} arrAction Key returning action (gets the array item and needs to return the key) or array item key name
-	 * @param {callable} result Value returning action (gets the item, the group (as LINQ array) and the group key as parameters, needs to return the final result to use)
-	 * @param {callable} comp (optional) Key comparing action (gets keys A and B as parameters and needs to return if they're equal)
+	 * @param {Function<any,any>|string} action Key action or item property name
+	 * @param {Function<any,any>|string} arrAction Key action or array item property name
+	 * @param {Function<any,LinqArray,any} result Value returning action (gets the item, the group (as LINQ array) and the group key as parameters, needs to return the final result to use)
+	 * @param {Function<any,any,boolean>} comp (optional) Key comparer action
 	 * @return {LinqArray} Resulting LINQ array
 	 */
 	GroupJoin(arr,action,arrAction,result,comp=null){
@@ -216,7 +216,7 @@
 	/**
 	 * Apply a filter
 	 * 
-	 * @param {callable} action Filter action (will get the item and the index as parameters, and needs to return if to filter the item)
+	 * @param {Function<any,int,boolean>} action Filter action
 	 * @return {LinqArray} Filtered LINQ array
 	 */
 	Where(action){
@@ -234,7 +234,7 @@
 	/**
 	 * Determine if a filter applies to all values
 	 * 
-	 * @param {callable} action Filter action
+	 * @param {Function<any,int,boolean>} action Filter action
 	 * @return {boolean} Applies to all?
 	 */
 	All(action){
@@ -246,7 +246,7 @@
 	/**
 	 * Determine if a filter applies to any value
 	 * 
-	 * @param {callable} action (optional) Filter action
+	 * @param {Function<any,int,boolean>} action (optional) Filter action
 	 * @return {boolean} Applies to a value?
 	 */
 	Any(action=null){
@@ -258,7 +258,7 @@
 	/**
 	 * Ensure distinct values
 	 * 
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {LinqArray} LINQ array with distinct values
 	 */
 	Distinct(comp=null){
@@ -277,8 +277,8 @@
 	/**
 	 * Ensure distinct values
 	 * 
-	 * @param {callable|string} action Value returning action or item key name
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any>|string} action Value action or item key name
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {LinqArray} LINQ array with distinct values
 	 */
 	DistinctBy(action,comp=null){
@@ -301,7 +301,7 @@
 	 * Append only non-contained values
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @param {boolean} inPlace (optional) Append to THIS LINQ array (default: `false`)
 	 * @return {LinqArray} Extended LINQ array
 	 */
@@ -325,8 +325,8 @@
 	 * Append only non-contained values
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable|string} action Value returning action or item key name
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any>|string} action Value action or item key name
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @param {boolean} inPlace (optional) Append to THIS LINQ array (default: `false`)
 	 * @return {LinqArray} Extended LINQ array
 	 */
@@ -353,7 +353,7 @@
 	/**
 	 * Create a value list
 	 * 
-	 * @param {callable|string} action Value generator function (will get the item and index as parameters, and needs to return the value to select) or item key name
+	 * @param {Function<any,int,any>|string} action Value action or item key name
 	 * @return {LinqArray} New LINQ array with the selected values
 	 */
 	Select(action){
@@ -371,8 +371,8 @@
 	/**
 	 * Select many items
 	 * 
-	 * @param {callable|string} selector Items selector (will get a source item and the index as parameters, and needs to return an array of items to use) or item key name
-	 * @param {callable} result (optional) Result (will get a source item and one of the selected items as parameters, and needs to return the final item to use)
+	 * @param {Function<any,int,Array>|string} selector Items selector (will get a source item and the index as parameters, and needs to return an array of items to use) or item key name
+	 * @param {Function<any,any,any>} result (optional) Result action (will get a source item and one of the selected items as parameters, and needs to return the final item to use)
 	 * @return {LinqArray} Resulting items LINQ arary
 	 */
 	SelectMany(selector,result=null){
@@ -400,7 +400,7 @@
 	 * Combine sequences
 	 * 
 	 * @param {Array} arr Second sequence
-	 * @param {callable|Array} action (optional) Result returning action (will get item A and B and needs to return the resulting value) or the third sequence 
+	 * @param {Function<any,any,any>|Array} action (optional) Result returning action (will get item A and B and needs to return the resulting value) or the third sequence 
 	 * @return {LinqArray} New LINQ array
 	 */
 	Zip(arr,action=null){
@@ -441,7 +441,7 @@
 	 * Exclude items
 	 * 
 	 * @param {Array} exclude Values to exclude
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {LinqArray} Filtered LINQ array
 	 */
 	Except(exclude,comp=null){
@@ -461,8 +461,8 @@
 	 * Exclude items
 	 * 
 	 * @param {Array} exclude Values to exclude
-	 * @param {callable|string} action Key returning action or item key name
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any>|string} action Key action or item key name
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {LinqArray} Filtered LINQ array
 	 */
 	ExceptBy(exclude,action,comp=null){
@@ -486,7 +486,7 @@
 	 * Find intersecting values
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {LinqArray} Values that are contained in this and the array
 	 */
 	Intersect(arr,comp=null){
@@ -507,8 +507,8 @@
 	 * Find intersecting values
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable|string} action Key returning action or item key name
-	 * @param {callable} comp (optional) Comparer (will get two items as parameters and needs to return, if they're equal)
+	 * @param {Function<any,any>|string} action Key action or item key name
+	 * @param {Function<any,any,boolean>} comp (optional) Comparer action
 	 * @return {LinqArray} Values that are contained in this and the array
 	 */
 	IntersectBy(arr,action,comp=null){
@@ -542,7 +542,7 @@
 	/**
 	 * Get the first item
 	 * 
-	 * @param {callable} action (optional) Filter action (default: `null`)
+	 * @param {Function<any,boolean>} action (optional) Filter action
 	 * @return {any} First item
 	 */
 	First(action=null){
@@ -559,7 +559,7 @@
 	/**
 	 * Get the first item or a default result
 	 * 
-	 * @param {callable|any} action Filter action or default result
+	 * @param {Function<any,boolean>|any} action Filter action or default result
 	 * @param {any} defaultResult (optional) Default result (default: `null`)
 	 * @return {any} First item or the default result
 	 */
@@ -577,7 +577,7 @@
 	/**
 	 * Get the last item
 	 * 
-	 * @param {callable} action (option) Filter action (default: `null`)
+	 * @param {Function<any,boolean>} action (option) Filter action
 	 * @return {any} Last item
 	 */
 	Last(action=null){
@@ -594,7 +594,7 @@
 	/**
 	 * Get the last item or a default result
 	 * 
-	 * @param {callable|any} action Filter action or default result
+	 * @param {Function<any,boolean>|any} action Filter action or default result
 	 * @param {any} defaultResult (optional) Default result (default: `null`)
 	 * @return {any} Last item or the default result
 	 */
@@ -609,7 +609,7 @@
 	/**
 	 * Find a single distinct value
 	 * 
-	 * @param {callable} action (optional) Filter action (gets the item as parameter and needs to return if to use the item)
+	 * @param {Function<any,boolean>} action (optional) Filter action
 	 * @return {any} Distinct value
 	 */
 	Single(action=null){
@@ -634,7 +634,7 @@
 	/**
 	 * Find a single distinct value or a default result
 	 * 
-	 * @param {callable} action Filter action (gets the item as parameter and needs to return if to use the item) or default result
+	 * @param {Function<any,boolean>|any} action Filter action (gets the item as parameter and needs to return if to use the item) or default result
 	 * @param {any} defaultResult (optional) Default result (default: `null`)
 	 * @return {any} Distinct value
 	 */
@@ -687,8 +687,8 @@
 	/**
 	 * Order
 	 * 
-	 * @param {callable|string} action (optional) Value returning function or item key name
-	 * @param {callable} order (optional) Ordering function (will get value A, B, if descending, and item A and B, needs to return the comparing result)
+	 * @param {Function<any,any>|string} action (optional) Value action or item key name
+	 * @param {Function<any,any,boolean,any,any,int>} order (optional) Ordering action
 	 * @param {boolean} inPlace (optional) Order THIS LINQ array (default: `false`)
 	 * @return {LinqArray} Ordered LINQ array
 	 */
@@ -697,8 +697,8 @@
 	/**
 	 * Order descending
 	 * 
-	 * @param {callable|string} action (optional) Value returning function or item key name
-	 * @param {callable} order (optional) Ordering function (will get value A, B, if descending, and item A and B, needs to return the comparing result)
+	 * @param {Function<any,any>|string} action (optional) Value action or item key name
+	 * @param {Function<any,any,boolean,any,any,int>} order (optional) Ordering action
 	 * @param {boolean} inPlace (optional) Order THIS LINQ array (default: `false`)
 	 * @return {LinqArray} Ordered LINQ array
 	 */
@@ -707,8 +707,8 @@
 	/**
 	 * Order ascending/descending
 	 * 
-	 * @param {callable|string} action (optional) Value returning function or item key name
-	 * @param {callable} order (optional) Ordering function (will get value A, B, if descending, and item A and B, needs to return the comparing result)
+	 * @param {Function<any,any>|string} action (optional) Value action or item key name
+	 * @param {Function<any,any,boolean,any,any,int>} order (optional) Ordering action
 	 * @param {boolean} inPlace (optional) Order THIS LINQ array (default: `false`)
 	 * @param {boolean} desc Order descending?
 	 * @return {LinqArray} Ordered LINQ array
@@ -726,8 +726,8 @@
 	/**
 	 * Order
 	 * 
-	 * @param {callable|string} action Value returning function (gets the item as parameter and needs to return the key) or item key name
-	 * @param {callable} order (optional) Ordering function (will get value A, B, if descending, and item A and B, needs to return the comparing result)
+	 * @param {Function<any,any>|string} action Value action or item key name
+	 * @param {Function<any,any,boolean,any,any,int>} order (optional) Ordering action
 	 * @return {LinqArray} Ordered LINQ array
 	 */
 	ThenBy(action,order=null){return this.#_ThenBy(action,order,false);}
@@ -735,8 +735,8 @@
 	/**
 	 * Order descending
 	 * 
-	 * @param {callable|string} action Value returning function (gets the item as parameter and needs to return the key) or item key name
-	 * @param {callable} order (optional) Ordering function (will get value A, B, if descending, and item A and B, needs to return the comparing result)
+	 * @param {Function<any,any>|string} action Value action or item key name
+	 * @param {Function<any,any,boolean,any,any,int>} order (optional) Ordering action
 	 * @return {LinqArray} Ordered LINQ array
 	 */
 	ThenByDescending(action,order=null){return this.#_ThenBy(action,order,true);}
@@ -744,8 +744,8 @@
 	/**
 	 * Order ascending/descending
 	 * 
-	 * @param {callable|string} action Value returning function (gets the item as parameter and needs to return the key) or item key name
-	 * @param {callable} order (optional) Ordering function (will get value A, B, if descending, and item A and B, needs to return the comparing result)
+	 * @param {Function<any,any>|string} action Value action or item key name
+	 * @param {Function<any,any,boolean,any,any,int>} order (optional) Ordering action
 	 * @param {boolean} desc Order descending?
 	 * @return {LinqArray} Ordered LINQ array
 	 */
@@ -766,8 +766,8 @@
 	/**
 	 * Group
 	 * 
-	 * @param {callable|string} action (optional) Group key returning function or item key name
-	 * @param {callable} result (optional) Result returning function (gets the item as parameter and need to return the group value)
+	 * @param {Function<any,any>|string} action (optional) Group key action or item key name
+	 * @param {Function<any,any>} result (optional) Result action
 	 * @return {LinqArray[]} Groups (as LINQ array of LINQ arrays)
 	 */
 	GroupBy(action=null,result=null){
@@ -830,7 +830,7 @@
 	/**
 	 * Skip items until the filter action returned `false` once
 	 * 
-	 * @param {callable} action Filter action
+	 * @param {Function<any,boolean>} action Filter action
 	 * @return {LinqArray} Reduced LINQ array
 	 */
 	SkipWhile(action){return this._CreateGenerated(this.GetWhenNot(action));}
@@ -838,7 +838,7 @@
 	/**
 	 * Get items after the filter action returns `false`
 	 * 
-	 * @param {callable} action Filter action
+	 * @param {Function<any,boolean>} action Filter action
 	 * @return {...any} Items
 	 */
 	*GetWhenNot(action){
@@ -887,7 +887,7 @@
 	/**
 	 * Take items until the filter action returns `false`
 	 * 
-	 * @param {callable} action Filter action
+	 * @param {Function<any,boolean>} action Filter action
 	 * @return {LinqArray} Reduced LINQ array
 	 */
 	TakeWhile(action){return this._CreateGenerated(this.GetWhile(action));}
@@ -895,7 +895,7 @@
 	/**
 	 * Get items until the filter action returns `false`
 	 * 
-	 * @param {callable} action Filter action
+	 * @param {Function<any,boolean>} action Filter action
 	 * @return {...any} Items
 	 */
 	*GetWhile(action){
@@ -1086,7 +1086,7 @@
 	/**
 	 * Maximum value
 	 * 
-	 * @param {callable|string} action (optional) Value returning action (gets the item as parameter and needs to return the value to count) or item key name
+	 * @param {Function<any,any>|string} action (optional) Value action or item key name
 	 * @return {number} Maximum value
 	 */
 	Max(action=null){
@@ -1100,7 +1100,7 @@
 	/**
 	 * Item with the maximum
 	 * 
-	 * @param {callable|string} action Value returning action (gets the item as parameter and needs to return the value to count) or item key name
+	 * @param {Function<any,any>|string} action Value action or item key name
 	 * @return {any} Item with the maximum
 	 */
 	MaxBy(action){
@@ -1126,7 +1126,7 @@
 	/**
 	 * Minimum value
 	 * 
-	 * @param {callable|string} action (optional) Value returning action (gets the item as parameter and needs to return the value to count) or item key name
+	 * @param {Function<any,any>|string} action (optional) Value action or item key name
 	 * @return {number} Minimum value
 	 */
 	Min(action=null){
@@ -1140,7 +1140,7 @@
 	/**
 	 * Item with the minimum
 	 * 
-	 * @param {callable|string} action Value returning action (gets the item as parameter and needs to return the value to count) or item key name
+	 * @param {Function<any,any>|string} action Value action or item key name
 	 * @return {any} Item with the minimum
 	 */
 	MinBy(action){
@@ -1166,7 +1166,7 @@
 	/**
 	 * Summarize
 	 * 
-	 * @param {callable|string} action (optional) Value returning action (gets the item as parameter and needs to return the value to use) or item property name
+	 * @param {Function<any,any>|string} action (optional) Value action or item property name
 	 * @return {number} Summary of all values
 	 */
 	Sum(action=null){return (action==null?this:this.Select(action)).EnsureGenerated().reduce((total,current)=>total+current,0);}
@@ -1174,7 +1174,7 @@
 	/**
 	 * Average value
 	 * 
-	 * @param {callable|string} action (optional) Value returning action (gets the item as parameter and needs to return the value to use) or item property name
+	 * @param {Function<any,any>|string} action (optional) Value action or item property name
 	 * @return {number} Average value
 	 */
 	Average(action=null){
@@ -1187,7 +1187,7 @@
 	 * Determine if an array equals this
 	 * 
 	 * @param {Array} arr Array
-	 * @param {callable} comp (optional) Comparing function (gets items A and B, the index and if strict as parameters, and needs to return if the item at the index is equal)
+	 * @param {Function<any,any,boolean,boolean>} comp (optional) Comparing action
 	 * @param {boolean} strict (optional) Be strict (default: `false`)?
 	 * @return {boolean} Is equal?
 	 */
@@ -1197,16 +1197,16 @@
 		if(!len) return true;
 		if(!comp) comp=(a,b)=>(!strict&&a==b)||(strict&&a===b);
 		arr=LinqArray.Helper.EnsureFinalArray(arr);
-		for(let i=0;i<len;i++) if(!comp(this[i],arr[i],i,strict)) return false;
+		for(let i=0;i<len;i++) if(!comp(this[i],arr[i],strict)) return false;
 		return true;
 	}
 
 	/**
 	 * Aggregate
 	 * 
-	 * @param {callable} action Action per item that returns the next seed (and will get the seed and the item as parameters)
+	 * @param {Function<any,any,any>} action Action per item that returns the next seed (and will get the seed and the item as parameters)
 	 * @param {any} seed (optional) Initial value
-	 * @param {callable} result (optional) Action to transform the final result (will get the last seed as parameter)
+	 * @param {Function<any,any>} result (optional) Result action
 	 * @return {any} Result
 	 */
 	Aggregate(action,seed=undefined,result=null){
@@ -1232,7 +1232,7 @@
 	/**
 	 * Execute an action for all items (until interrupted)
 	 * 
-	 * @param {callable} action Action with a return value
+	 * @param {Function<any,any>} action Action with a return value
 	 * @return {...any} Return values
 	 */
 	*Execute(action){
@@ -1243,7 +1243,7 @@
 	/**
 	 * Execute an asynchronous action for all items (until interrupted)
 	 * 
-	 * @param {callable} action Asynchronous action with a return value
+	 * @param {AsyncFunction<any,Promise<any>>} action Asynchronous action with a return value
 	 * @return {...any} Return values
 	 */
 	async *ExecuteAsync(action){
@@ -1254,7 +1254,7 @@
 	/**
 	 * Execute an action for each item
 	 * 
-	 * @param {callable} action Action (gets the item and the index as parameters, may return `false` to break the loop (and cut the resulting array, too!))
+	 * @param {Function<any,int,boolean?>} action Action (gets the item and the index as parameters, may return `false` to break the loop (and cut the resulting array, too!))
 	 * @param {boolean} inPlace (optional) Execute for THIS LINQ array (don't create a new LINQ array) (default: `true`)?
 	 * @return {LinqArray} New LINQ array or this
 	 */
@@ -1284,7 +1284,7 @@
 	/**
 	 * Execute an asynchronous action for each item IN PLACE
 	 * 
-	 * @param {callable} action Action (gets the item and the index as parameters, may return `false` to break the loop (and cut the resulting array, too!))
+	 * @param {AsyncFunction<any,int,boolean?>} action Action (gets the item and the index as parameters, may return `false` to break the loop (and cut the resulting array, too!))
 	 * @return {LinqArray} This
 	 */
 	async ForEachAsync(action){
@@ -1333,8 +1333,8 @@
 	 * 
 	 * The generator functions will get the item as first, and the resulting map as second parameter.
 	 * 
-	 * @param {callable|string} key Key generator (gets the item as parameter and needs to return the key value to use) or item key name
-	 * @param {callable} value (optional) Value generator (gets the item and the generated key as parameters and needs to return the value to use) (default: `null`)
+	 * @param {Function<any,any>|string} key Key action or item key name
+	 * @param {Function<any,any,any>} value (optional) Value action (gets the item and the generated key as parameters and needs to return the value to use) (default: `null`)
 	 * @return {Map<any>} Map
 	 */
 	ToDictionary(key,value=null){
@@ -1353,24 +1353,25 @@
 	/**
 	 * Create a set (with distinct values)
 	 * 
-	 * @param {callable|string} value (optional) Value generator (gets the item and the resulting set as parameters and needs to return the value to use) or item key name (default: `null`)
-	 * @return {Set<any>} Set
+	 * @param {Function<any,Set,any>|string} value (optional) Value action (gets the item and the resulting set as parameters and needs to return the value to use) or item key name (default: `null`)
+	 * @return {Set} Set
 	 */
 	ToHashSet(value=null){
 		const self=this;
 		if(value!=null) value=LinqArray.Helper.EnsureValueGetter(value);
-		return new Set(value?function*(){
+		const res=new Set(value?function*(){
 			let item;
-			for(item of self) yield value?value(item):item;
+			for(item of self) yield value?value(item,res):item;
 		}():this);
+		return res;
 	}
 
 	/**
 	 * Create a lookup map (a dictionary with multiple values per key)
 	 * 
-	 * @param {callable|string} key (optional) Key generator (gets the item as parameter and needs to return the key value to use) or item key name (default: `null`)
-	 * @param {callable} value (optional) Value generator (gets the item and the generated key as parameters and needs to return the value to use)
-	 * @return {Map<any>} Lookup map
+	 * @param {Function<any,any>|string} key (optional) Key action or item key name (default: `null`)
+	 * @param {Function<any,any,any>} value (optional) Value action (gets the item and the generated key as parameters and needs to return the value to use)
+	 * @return {Map} Lookup map
 	 */
 	ToLookup(key,value=null){
 		const res=new Map();

@@ -4,6 +4,22 @@ A lightweight LINQ-like implementation for JavaScript.
 
 **NOTE**: _Since this is an early alpha release (just a proof of concept), it may not work as expected, contain bugs, and the API may change in future releases!_
 
+- [Usage](#usage)
+	- [Simple usage](#simple-usage)
+	- [Understanding how it works](#understanding-how-it-works)
+	- [How to work with generators](#how-to-work-with-generators)
+		- [Benefit from lazy execution](#benefit-from-lazy-execution)
+		- [Disable array buffering](#disable-array-buffering)
+	- [Common delegates](#common-delegates)
+		- [Value returning item action (key/value/data/result action)](#value-returning-item-action-key-value-data-result-action)
+		- [Item condition action (filter action)](#item-condition-action-filter-action)
+		- [Object comparer (comparer action)](#object-comparer-comparer-action)
+- [Useful LINQ extensions](#useful-linq-extensions)
+- [More information](#more-information)
+- [Known issues](#known-issues)
+	- [Direct modification breaks lazy child-LINQ arrays](#direct-modification-breaks-lazy-child-linq-arrays)
+	- [Random errors from insane values](#random-errors-from-insane-values)
+
 This implementation is the `LinqArray` class, which inherits from `Array`. So in fact you'll be working with an extended JavaScript `Array`, having all the standard array functions available, too.
 
 **NOTE**: JS-LINQ doesn't touch the JavaScript `Array` prototype - it's an ES6 class that inherits the `Array` type!
@@ -90,7 +106,7 @@ You may extend the `LinqArray` class as you require, hope it's prepared well for
 
 ### Understanding how it works
 
-All inherited array object methods, properties and indexed array access are available, but they may not work as you expect: `LinqArray` uses generator functions to create results on demand (lazy).
+All inherited array object methods, properties and indexed array access are available, but they may not work as you expect: `LinqArray` uses generator functions to create results on demand (lazy execution).
 
 Unless all resulting items have been generated, the `length` property for example may not return the correct final number of items, but the number of currently generated items. If you need the correct final number of items, use the `Count` method instead (which may also return the estimated count without enumerating). Or you can try getting the estimated final number of items by using the `TryGetNonEnumeratedCount` method, which will return `null` in case it's not possible to estimate the value.
 
@@ -98,6 +114,7 @@ Acessing items using the array index accessor `obj[n]` may not work as expected,
 
 ```js
 const linqArray=From([1,2,3]);
+console.log(linqArray.Count());// 3, because Count uses the estimated length
 console.log(linqArray.length);// 0, because no item was generated yet
 console.log(linqArray.First());// 1, one item was generated
 console.log(linqArray.length);// 1, because one item was generated so far
@@ -109,7 +126,7 @@ console.log(linqArray[1]);// 2
 console.log(linqArray[2]);// 3
 ```
 
-Explaination: The array that you give to the constructor will be fed item by item trough a generator function to the LINQ array object, as the items are required. After constructing the instance, no item was processed yet. The `First` method will process exactly one item, which will be available at index `0` of the LINQ array object. But index `1` still returns `undefined`, because the second item wasn't processed by the generator yet. `EnsureGenerated` will force the generator to process all pending items.
+Explaination: The array that you give to the constructor will be fed item by item trough a generator function to the LINQ array object, as the items are required. After constructing the instance, no item was processed yet, but `Count` would return the estimated length. The `First` method will process exactly one item, which will be available at index `0` of the LINQ array object. But index `1` still returns `undefined`, because the second item wasn't processed by the generator yet. `EnsureGenerated` will force the generator to process all pending items.
 
 Once you've used a method that forced to iterate trough all items, you can be sure that all items have been generated. The inherited array object methods like `sort`, `map`, `filter` etc. will iterate trough all items, for example. Please refer to the [JavaScript `Array` reference](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Global_Objects/Array) for details about that.
 
@@ -208,6 +225,68 @@ To identify LINQ methods that require array buffering, have a look into the sour
 These method calls are indicators that array buffering is required for executing a method. If you disabled the array buffer, but any method requires it to be enabled, you'll see an error telling "_Storing was disabled_" in the console.
 
 **NOTE**: Iterating a LINQ array with a disabled array buffer works only once! A generator/iterator won't be restarted.
+
+### Common delegates
+
+#### Value returning item action (key/value/data/result action)
+
+	Function<any,int?,any>
+
+Many methods allow a function or a string parameter when filtering items, f.e.. These methods will get these parameters:
+
+- Current item
+- Optional current item index
+
+The value that should be used is expected to be returned.
+
+**NOTE**: Asynchronous functions aren't supported in almost all cases!
+
+#### Item condition action (filter action)
+
+	Function<any,int?,boolean>
+
+Some methods allow a function parameter for filtering items. These methods will get these parameters:
+
+- Current item
+- Optional current item index
+
+A boolean return value indicating if the item will be used (`true`) or not (`false`) is expected.
+
+**NOTE**: Asynchronous functions aren't supported!
+
+#### Sorting comparer (order action)
+
+	Function<any,any,boolean,any?,any?,int>
+
+For ordering items, you may specify a custom sorting comparer callback, that will get these parameters:
+
+- Object A
+- Object B
+- If sorting descending
+- Optional original object A
+- Optional original object B
+
+The method needs to return, if A is greater than, lower than or equal to B:
+
+- `-1`: A is lower than B
+- `0`: A equals B
+- `1`: A is greater than B
+
+**NOTE**: Asynchronous functions aren't supported!
+
+#### Object comparer (comparer action)
+
+	Function<any,any,boolean?,boolean>
+
+For comparing two objects, you may use a custom comparer callback, that will get these parameters:
+
+- Object A
+- Object B
+- Optional if strict comparsion was requested
+
+The method needs to return, if A and B are equal (`true` or `false`).
+
+**NOTE**: Asynchronous functions aren't supported!
 
 ## Useful LINQ extensions
 
