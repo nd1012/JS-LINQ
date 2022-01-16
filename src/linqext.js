@@ -309,29 +309,57 @@
 	 * @param {string} xml XML
 	 * @return {LinqArrayExt} LINQ array
 	 */
-	static FromXml(xml){return this.FromDomNode((new DOMParser()).parseFromString(xml,'application/xml').firstChild);}
+	static FromXml(xml){
+		const dom=(new DOMParser()).parseFromString(xml,'application/xml');
+		let node=null,
+			child;
+		for(child of dom.childNodes){
+			if(child.nodeType!=Node.ELEMENT_NODE) continue;
+			node=child;
+			break;
+		}
+		return node&&node.childNodes.length?this.FromNode(node):new this();
+	}
 
 	/**
-	 * Convert a DOM
+	 * Convert a `Node` object
 	 * 
-	 * **NOTE**: Node attributes will be ignored! All child nodes from the given node will be used as object (if they have child nodes, too) or string items (recursive 
-	 * processing).
+	 * **NOTE**: All child nodes from the given node will be used as object (if they have child nodes, too) or string items (recursive processing). If a node contains 
+	 * many child nodes with the same name, the values will be collected as LINQ array.
 	 * 
-	 * @param {ChildNode} node Child node
+	 * @param {Node} node Node
 	 * @return {LinqArrayExt} LINQ array
 	 */
-	static FromDomNode(node){
+	static FromNode(node){
 		const nodeToObject=(node)=>{
-				if(!node.childNodes.length) return node.textContent;
-				const res={};
-				let child;
-				for(child of node.childNodes) res[child.nodeName]=child.childNodes.length?nodeToObject(node):node.textContent;
-				return res;
+				const res={},
+					text=node.textContent?.trim()??'';
+				let child,
+					any=false,
+					value;
+				for(child of node.childNodes)
+					switch(child.nodeType){
+						case Node.ELEMENT_NODE:
+							value=nodeToObject(child);
+							if(LinqArray.Helper.IsUndefined(res[child.nodeName])){
+								res[child.nodeName]=value;
+							}else if(LinqArray.Helper.IsLinqArray(res[child.nodeName])){
+								res[child.nodeName].push(value);
+							}else{
+								res[child.nodeName]=(new this()).SetData(res[child.nodeName],value);
+							}
+							any=true;
+							break;
+						case Node.TEXT_NODE:
+							if(text==''||(child.textContent?.trim()??'')=='') break;
+							return node.textContent;
+					}
+				return any?res:(text==''?null:text);
 			};
-		return (new this()).Generate(function*(){
+		return node.childNodes.length?(new this()).Generate(function*(){
 			let child;
-			for(child in node.childNodes) yield nodeToObject(child);
-		},node.childNodes.length);
+			for(child of node.childNodes) if(child.nodeType==Node.ELEMENT_NODE) yield nodeToObject(child);
+		}()):new this();
 	}
 
 	/**
