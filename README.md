@@ -230,6 +230,8 @@ These method calls are indicators that array buffering is required for executing
 
 ### Common delegates
 
+The described delegates may be only slightly different in special cases. Read the DocComment block of a method for details about how a delegate works, and which parameters will be given.
+
 #### Value returning item action (key/value/data/result action)
 
 	Function<any,int?,any>
@@ -260,7 +262,7 @@ A boolean return value indicating if the item will be used (`true`) or not (`fal
 
 	Function<any,any,boolean,any?,any?,int>
 
-For ordering items, you may specify a custom sorting comparer callback, that will get these parameters:
+For ordering items you may specify a custom sorting comparer callback, that will get these parameters:
 
 - Object A
 - Object B
@@ -280,7 +282,7 @@ The method needs to return, if A is greater than, lower than or equal to B:
 
 	Function<any,any,boolean?,boolean>
 
-For comparing two objects, you may use a custom comparer callback, that will get these parameters:
+For comparing two objects you may use a custom comparer callback, that will get these parameters:
 
 - Object A
 - Object B
