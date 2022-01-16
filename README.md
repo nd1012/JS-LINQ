@@ -309,6 +309,8 @@ Feel free to load `linqext.js` or `linqext.min.js` in addition for some more hop
 - `Doubles` finds items that are included more than once (and returns them grouped)
 - `Replace` replaces an item with another item
 - static `FromCsv` parses a CSV data source
+- static `FromXml` parses a XML data source
+- static `FromNode` converts a `Node` object (from the DOM or an XML document f.e.)
 - static `Fibonacci` creates an (almost) endless Fibonacci sequence (will crash when it exceeds the maximum numeric value)
 - static `RandomInt` created an infinity sequence of random integer values
 - static `RandomArbitrary` created an infinity sequence of random numeric values
