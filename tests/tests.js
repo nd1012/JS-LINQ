@@ -133,6 +133,13 @@ class TestResults{
  */
 class Tests extends TestResults{
 	/**
+	 * Version number
+	 * 
+	 * @var {int}
+	 */
+	static #VERSION=2;
+
+	/**
 	 * Current test
 	 * 
 	 * @var {string}
@@ -158,6 +165,13 @@ class Tests extends TestResults{
 	#IsTestsFailTest=false;
 
 	/**
+	 * Get the version number
+	 * 
+	 * @return {int} Version number
+	 */
+	static get VERSION(){return this.#VERSION;}
+
+	/**
 	 * Get the test methods names
 	 * 
 	 * @return {string[]} Test method names
@@ -176,7 +190,7 @@ class Tests extends TestResults{
 	 * 
 	 * @return {boolean} Is the fail test?
 	 */
-	get _IsTestsFailtest(){return this.#IsTestsFailTest;}
+	get _IsTestsFailTest(){return this.#IsTestsFailTest;}
 
 	/**
 	 * Catch an exception of an action (if any)
@@ -222,11 +236,11 @@ class Tests extends TestResults{
 		this.Assertions++;
 		this.#TestAssertions++;
 		if(!condition){
-			if(!this._IsTestsFailtest){
+			if(!this._IsTestsFailTest){
 				console.groupEnd();
 				debugger;
 			}
-			throw new AssertionError('Assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,true,false);
+			throw new AssertionError('Conditional assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,true,false);
 		}
 		return this;
 	}
@@ -243,10 +257,10 @@ class Tests extends TestResults{
 		this.Assertions++;
 		this.#TestAssertions++;
 		if(strict?a!==b:a!=b){
-			if(!this._IsTestsFailtest) console.groupEnd();
+			if(!this._IsTestsFailTest) console.groupEnd();
 			console.warn(a,b,strict);
-			if(!this._IsTestsFailtest) debugger;
-			throw new AssertionError('Assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,a,b);
+			if(!this._IsTestsFailTest) debugger;
+			throw new AssertionError('Assertion failed (not equal) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,a,b);
 		}
 		return this;
 	}
@@ -263,10 +277,10 @@ class Tests extends TestResults{
 		this.Assertions++;
 		this.#TestAssertions++;
 		if(strict?a===b:a==b){
-			if(!this._IsTestsFailtest) console.groupEnd();
+			if(!this._IsTestsFailTest) console.groupEnd();
 			console.warn(a,b,strict);
-			if(!this._IsTestsFailtest) debugger;
-			throw new AssertionError('Assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,undefined,b);
+			if(!this._IsTestsFailTest) debugger;
+			throw new AssertionError('Assertion failed (equal) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,undefined,b);
 		}
 		return this;
 	}
@@ -276,16 +290,22 @@ class Tests extends TestResults{
 	 * 
 	 * @param {any} obj Object
 	 * @param {Function<any>|string} type Type (name)
+	 * @param {boolean} strict (optional) Stric comparesion?
 	 * @return {Tests} This
 	 */
-	AssertType(obj,type){
+	AssertType(obj,type,strict=false){
 		this.Assertions++;
 		this.#TestAssertions++;
-		if(typeof type=='string'?typeof obj!=type&&obj?.constructor?.name!=type:!(obj instanceof type)){
-			if(!this._IsTestsFailtest) console.groupEnd();
+		const isString=typeof type=='string',
+			lc=isString&&!strict?type.toLowerCase():type;
+		if(isString
+			?typeof obj!=lc&&(strict?obj?.constructor?.name:obj?.constructor?.name?.toLowerCase())!==lc
+			:!(obj instanceof type)&&(!strict||obj?.constructor?.name!==type.name)
+			){
+			if(!this._IsTestsFailTest) console.groupEnd();
 			console.warn(obj,type);
-			if(!this._IsTestsFailtest) debugger;
-			throw new AssertionError('Assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,obj,type);
+			if(!this._IsTestsFailTest) debugger;
+			throw new AssertionError('Type assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,obj,type);
 		}
 		return this;
 	}
@@ -295,16 +315,22 @@ class Tests extends TestResults{
 	 * 
 	 * @param {any} obj Object
 	 * @param {Function<any>|string} type Type (name)
+	 * @param {boolean} strict (optional) Stric comparesion?
 	 * @return {Tests} This
 	 */
-	AssertNotType(obj,type){
+	AssertNotType(obj,type,strict=false){
 		this.Assertions++;
 		this.#TestAssertions++;
-		if(typeof type=='string'?typeof obj==type||obj?.constructor?.name==type:obj instanceof type){
-			if(!this._IsTestsFailtest) console.groupEnd();
+		const isString=typeof type=='string',
+			lc=isString&&!strict?type.toLowerCase():type;
+		if(isString
+			?typeof obj==lc&&(!strict||obj?.constructor?.name?.toLowerCase()===lc)
+			:obj instanceof type&&(!strict||obj?.constructor?.name===type.name)
+			){
+			if(!this._IsTestsFailTest) console.groupEnd();
 			console.warn(obj,type);
-			if(!this._IsTestsFailtest) debugger;
-			throw new AssertionError('Assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,undefined,obj);
+			if(!this._IsTestsFailTest) debugger;
+			throw new AssertionError('Not type assertion failed at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,undefined,obj);
 		}
 		return this;
 	}
@@ -324,9 +350,9 @@ class Tests extends TestResults{
 			throw new AssertionError('Assertion failed (exception not thrown) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,type,undefined);
 		}catch(ex){
 			if(type&&!(ex instanceof type)){
-				if(!this._IsTestsFailtest) console.groupEnd();
+				if(!this._IsTestsFailTest) console.groupEnd();
 				console.warn(ex);
-				if(!this._IsTestsFailtest) debugger;
+				if(!this._IsTestsFailTest) debugger;
 				throw new AssertionError('Assertion failed (exception type mismatch) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,type,ex);
 			}
 		}
@@ -348,9 +374,9 @@ class Tests extends TestResults{
 			throw new AssertionError('Assertion failed (exception not thrown) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,type,undefined);
 		}catch(ex){
 			if(type&&!(ex instanceof type)){
-				if(!this._IsTestsFailtest) console.groupEnd();
+				if(!this._IsTestsFailTest) console.groupEnd();
 				console.warn(ex);
-				if(!this._IsTestsFailtest) debugger;
+				if(!this._IsTestsFailTest) debugger;
 				throw new AssertionError('Assertion failed (exception type mismatch) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,type,ex);
 			}
 		}
@@ -368,9 +394,9 @@ class Tests extends TestResults{
 		try{
 			return action();
 		}catch(ex){
-			if(!this._IsTestsFailtest) console.groupEnd();
+			if(!this._IsTestsFailTest) console.groupEnd();
 			console.warn(ex);
-			if(!this._IsTestsFailtest) debugger;
+			if(!this._IsTestsFailTest) debugger;
 			throw new AssertionError('Assertion failed (unexpected exception) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,null,ex);
 		}
 	}
@@ -386,9 +412,9 @@ class Tests extends TestResults{
 		try{
 			return await action();
 		}catch(ex){
-			if(!this._IsTestsFailtest) console.groupEnd();
+			if(!this._IsTestsFailTest) console.groupEnd();
 			console.warn(ex);
-			if(!this._IsTestsFailtest) debugger;
+			if(!this._IsTestsFailTest) debugger;
 			throw new AssertionError('Assertion failed (unexpected exception) at current test assertion '+this.#TestAssertions,this,this.#CurrentTest,this.#TestAssertions,null,ex);
 		}
 	}
@@ -464,7 +490,7 @@ class Tests extends TestResults{
 				console.error('Unexpected exception after '+this.#TestAssertions+' assertions (after test runtime '+runtime+'ms)',ex);
 			}else{
 				console.error('Assertion '+this.#TestAssertions+' failed after test runtime '+runtime+'ms',ex);
-				if(!this._IsTestsFailtest) debugger;
+				if(!this._IsTestsFailTest) debugger;
 			}
 		}finally{
 			this.Runtime=Date.now()-start;
