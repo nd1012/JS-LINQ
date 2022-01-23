@@ -2,8 +2,9 @@
 <html lang="en">
 	<head>
 		<title>JS-LINQ demonstration</title>
-		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-Linq/src/linq.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-Linq/src/linqext.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-LINQ/src/plinq.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-LINQ/src/linq.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/gh/nd1012/JS-LINQ/src/linqext.min.js"></script>
 		<style>
 			textarea{
 				font-family:Consolas,Courier;
@@ -24,8 +25,9 @@
 	<body>
 		<form name="demo" action="javascript:execute();">
 			<h1>JS-LINQ demonstration</h1>
-			<p>Use this form or open the browser developer tools (F12 or Shift+Ctrl+I) and play with the JavaScipt console directly. The extensions are loaded, too.</p>
+			<p>Use this form or open the browser developer tools (F12 or Shift+Ctrl+I) and play with the JavaScipt console directly. The extensions and PLINQ are loaded, too.</p>
 			<h2>JavaScript input</h2>
+			<p>The script needs to return the output:</p>
 			<textarea name="input" cols="80" rows="20" required spellcheck="false">// Example CSV data for a pivot table
 const exampleData=LinqArrayExt.FromCsv([
 	'seller,customer,turnover,country',
@@ -88,7 +90,7 @@ const pivot=exampleData.Pivot(
 const pivotAsArray=pivot.ToArray();
 console.log('Pivot table:');
 console.table(pivotAsArray);
-alert('Have a look at the JavaScript console (F12 or Shift+Ctrl+I) for a rendered pivot table');
+setTimeout(()=>alert('Have a look at the JavaScript console (F12 or Shift+Ctrl+I) for a rendered pivot table'),0);
 return pivotAsArray;</textarea>
 			<p><input type="submit" value="Execute"></p>
 			<h2>Return value JSON</h2>

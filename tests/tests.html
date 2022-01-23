@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<script src="tests.js"></script>
+<script src="plinq.js"></script>
+<script src="linq.js"></script>
+<script src="linqext.js"></script>
+<script src="linq.tests.js"></script>
+<script src="linqext.tests.js"></script>
+<!--<script src="plinq.tests.js"></script>-->
+<script>
+window.addEventListener('load',async ()=>{
+	console.log(await Tests.RunAllTests(
+		new LinqArray_Tests()
+		,new LinqArrayExt_Tests()
+		//TODO ,new PLinq_Tests()
+	));
+});
+</script>
+<p>Find the test results in the JavaScript console (F12 or Ctrl+Shift+I).</p>

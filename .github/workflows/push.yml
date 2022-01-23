@@ -6,10 +6,18 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
-    
+
       - name: Minify CSS/JS
         uses: nizarmah/auto-minify@v2.1.1
-    
+
+      - name: Delete not required files
+        run: | 
+          rm -f ${GITHUB_WORKSPACE}/tests/*.min.js
+
+      - name: Update files from external sources
+        run: |
+          wget -v -O ${GITHUB_WORKSPACE}/tests/tests.js https://raw.githubusercontent.com/nd1012/JS-TESTS/main/src/tests.js
+
       - name: Commit modified files
         uses: stefanzweifel/git-auto-commit-action@v4
         with:

@@ -10,16 +10,21 @@ A lightweight LINQ-like implementation for JavaScript.
 	- [How to work with generators](#how-to-work-with-generators)
 		- [Benefit from lazy execution](#benefit-from-lazy-execution)
 		- [Disable array buffering](#disable-array-buffering)
+	- [Using dynamic](#using-dynamic)
 	- [Common delegates](#common-delegates)
 		- [Value returning item action (key/value/data/result action)](#value-returning-item-action-keyvaluedataresult-action)
 		- [Item condition action (filter action)](#item-condition-action-filter-action)
 		- [Sorting comparer (order action)](#sorting-comparer-order-action)
 		- [Object comparer (comparer action)](#object-comparer-comparer-action)
+	- [Parallel queries (PLINQ)](#parallel-queries-plinq)
 - [Useful LINQ extensions](#useful-linq-extensions)
 - [More information](#more-information)
 - [Known issues](#known-issues)
 	- [Direct modification breaks lazy child-LINQ arrays](#direct-modification-breaks-lazy-child-linq-arrays)
 	- [Random errors from insane values](#random-errors-from-insane-values)
+	- [Asynchronous methods break dynamic](#asynchronous-methods-break-dynamic)
+	- [Exception without message](#exception-without-message)
+	- [Strange summaries](#strange-summaries)
 
 This implementation is the `LinqArray` class, which inherits from `Array`. So in fact you'll be working with an extended JavaScript `Array`, having all the standard array functions available, too.
 
@@ -40,19 +45,26 @@ I tried to implement all basic LINQ functionality, and added some additional fun
 - `Reverse` can modify in place
 - `SequenceEqual` optional compares the type (be strict)
 - `Execute` executes an action for each item, processes lazy and yields the return values (for use with `for` f.e.)
-- `ExecuteAsync` executes an asynchronous action for each item, processes lazy and yields the return values (for use with `for await` f.e.)
 - `ForEach` executes an action for each item (optional lazy in a new instance) (the return value may break the loop)
-- `ForEachAsync` executes an action for each item in place (the return value may break the loop)
+- `NotOfType` filters by item type
 - `ToLinqArray` generates a lazy copy of the LINQ array contents (or optional a subset)
 - `ToArray` can optional create a subset
+- `ToDynamic` creates a dynamic LINQ array from an instance
+- `ToJson` creates a JSON string that can be deserialized using the static `FromJson`
 - `Generate` allows you to use your own lazy item generator function
+- `GenerateDynamic` allows you to use your own reuseable lazy item generator function
 - `EnsureGenerated` ensures all items are generated
 - `Finalize` works similar as `EnsureGenerated`, but will work with disabled storing, too
 - `Clear` clears the instance to the initial state (without any data)
-- `DisableStore` disable storing generated items in the array buffer (if it needs to iterate only once)
+- `DisableStore` disables storing generated items in the array buffer (if it needs to iterate only once)
+- `DisableDynamic` disables the dynamic generator or generates a new non-dynamic LINQ array from the current instance
 - static `ExtendArray` extends the `Array` prototype by a `ToLinqArray` method
 - static `ExtendObject` extends an iterable object with LINQ methods (experimental!)
 - static `From` generates a new instance from an array or a LINQ array
+- static `FromJson` deserializes a JSON string or object
+- static `FromJsonUri` uses/deserializes a JSON string or object from an URI
+
+Many methods are also available as asynchronous methods, having the `Async` postfix in the method name and allowing to perform asynchronous filtering actions.
 
 Some methods will have slightly different parameters (and parameter order) or they won't work exactly as the implementation of .NET. This is because JavaScript != .NET, and my goal was to create a lightweight LINQ-like implementation only, but not a 1:1 copy of the original. Anyway, all properties and each method, their parameters and return values are documented using common DocComment-blocks above them, so your IDE's context help should be able to support you while typing.
 
@@ -66,6 +78,8 @@ JS-LINQ comes with these files:
 
 1. `linq.js` and `linq.min.js`: The core library
 1. `linqext.js` and `linqext.min.js`: The optional extension library
+1. `plinq.js` and `plinq.min.js`: Optional PLINQ (parallel LINQ, should be loaded before any other LINQ array JavaScript!)
+1. `plinqworker.js` and `plinqworker.min.js`: PLINQ thread worker (required from `plinq*.js`, should be in the same folder as `linq*.js`, will be loaded automatic)
 
 You simply need to load the `linq.js` or `linq.min.js` (and the extension library, if you want to use it) using a script tag, or `importScripts`, or `import` etc., then you can do things like this:
 
@@ -104,7 +118,13 @@ When any method returns a list of results, the list is a new `LinqArray` instanc
 
 **NOTE**: Please note that the `LinqArray` constructor doesn't support giving the size of the array as single parameter. You can only give an optional initial array.
 
-You may extend the `LinqArray` class as you require, hope it's prepared well for that.
+Depending on your environment you can choose between these main LINQ array behaviors:
+
+1. Buffered queries on a fixed (non-changing/immutable) data source provides all the inherited benefits from the underlaying JavaScript `Array`, too (the default, good for small data sets and reused results)
+1. [Unbuffered queries](#disable-array-buffering) on a fixed data source to save some memory, but loose any inherited `Array` functionality (good for one-time-shots on large data sets)
+1. [Unbuffered dynamic queries](#using-dynamic) on a dynamic data source (without any inherited `Array` functionality, good for stored LINQ array structures with a dynamic data source, to work with up-to-date results at any time (which comes close to the .NET Enumerable+LINQ implementation))
+
+You may extend the `LinqArray` class as you require, hope it's well prepared for that. Protected methods and properties start with an underscore (`_`), for setting some private property values there are some protected methods available.
 
 ### Understanding how it works
 
@@ -183,7 +203,7 @@ If you extend the LINQ array class with a custom method, you may want to return 
 ```js
 return this._CreateGenerated(function*(){
 	// Yield items here
-}(),optionalEstimatedLength);
+},optionalEstimatedLength);
 ```
 
 `_CreateGenerated` will create an instance of your custom type, if you didn't extend the `LinqArray` prototype (same for the interited static methods that will return an instance).
@@ -227,6 +247,79 @@ To identify LINQ methods that require array buffering, have a look into the sour
 These method calls are indicators that array buffering is required for executing a method. If you disabled the array buffer, but any method requires it to be enabled, you'll see an error telling "_Storing was disabled_" in the console.
 
 **NOTE**: Iterating a LINQ array with a disabled array buffer works only once! A generator/iterator won't be restarted.
+
+### Using dynamic
+
+Usually the LINQ array assumes that the data source won't change. This may cause issues, if the data source is dynamic, and changes are common. To support a dynamic data source (not buffering, but iterable multiple times):
+
+```js
+// Without dynamic (default)
+const data=['some item'];
+const linqArray=new LinqArray(data);
+console.log(linqArray.Count());// 1
+data.push('another item');
+console.log(data.length);// 2
+console.log(linqArray.Count());// 1 (!)
+
+// With dynamic
+const data=['some item'];
+const linqArray=new LinqArray();
+linqArray.SetDynamicData(data);
+console.log(linqArray.Count());// 1
+data.push('another item');
+console.log(data.length);// 2
+console.log(linqArray.Count());// 2 (!)
+```
+
+**NOTE**: The dynamic will be passed to child-instances created from a dynamic LINQ array, where possible. A call to `EnsureGenerated` on a dynamic LINQ array would cause an exception.
+
+**WARNING**: A dynamic data source forces LINQ array to execute all iterations for every access, which may cause performance issues for large source data or many child-LINQ arrays in a row. Inherited methods and properties from `Array` and array access won't work as expected and should be avoided! The array buffering in a dynamic LINQ array is disabled.
+
+Or use a generator function:
+
+```js
+const linqArray=new LinqArray();
+linqArray.GenerateDynamic(function*(){
+	// Yield items here
+});
+```
+
+If you want to return a dynamic generated new `LinqArray` instance from your own LINQ extension:
+
+```js
+return this._CreateGenerated(function*(){
+	// Yield items here
+});
+```
+
+You can disable the dynamic for a LINQ array at any time:
+
+```js
+linqArray.DisableDynamic().EnsureGenerated();
+data.push('a third item');
+console.log(data.length);// 3
+console.log(linqArray.Count());// 2 (!)
+```
+
+`EnsureGenerated` generated all items from `data` into the `linqArray` buffer, so modifications to `data` won't have any effect to `linqArray` anymore.
+
+You could also disable the dynamic for a new LINQ array instance:
+
+```js
+const newLinqArray=linqArray.DisableDynamic(false).EnsureGenerated();
+console.log(linqArray.IsDynamic);// true
+console.log(newLinqArray.IsDynamic);// false
+data.push('a third item');
+console.log(data.length);// 3
+console.log(linqArray.Count());// 3
+console.log(newLinqArray.Count());// 2 (!)
+```
+
+Any modification to `data` won't effect `newLinqArray`, because it was unbound from the dynamic of `linqArray`, and all items are generated into the buffer of `newLinqArray` already.
+
+**NOTE**: [Asynchronous methods break dynamic](#asynchronous-methods-break-dynamic)!
+
+**TIP**: `ToDynamic` creates a dynamic LINQ array from an instance. `LinqArrayExt.DynamicFromFactory` allows to use an iterable factory action as source for a dynamic LINQ array.
 
 ### Common delegates
 
@@ -292,6 +385,66 @@ The method needs to return if A and B are equal (`true` or `false`).
 
 **NOTE**: Asynchronous functions aren't supported!
 
+### Parallel queries (PLINQ)
+
+PLINQ creates chunks from a LINQ array, processes requested LINQ array methods on those chunks in a webworker thread and returns the concatenated (or combined) results.
+
+**WARNING**: This is an experimental functionality!
+
+Example:
+
+```js
+const groupedLinqArray=await PLinq.QueryChunked(
+
+	// The LINQ array to use as data source
+	reallyHugeLinqArray,
+
+	// The method to call
+	'GroupBy',
+
+	// The parameters
+	['propertyName'],
+
+	// The context object to use
+	null,
+
+	// Limit the number of threads to use to 4
+	4,
+
+	// Use the group joining result handler
+	PLinq.GroupJoinResultHandler
+
+);
+```
+
+**NOTE**: If you provide a callback in the parameters, it won't be able to access its original scope, when they're being executed in the webworker thread context! Generator functions aren't supported.
+
+If you need any JavaScript environment in your callback in the webworker context, you can provide a list of JavaScript URIs to import in the context's `Import` property. The context object may contain any JSON (de)serializeable information that your callback need. To ensure that no information will be overwritten, you should place everything in the `Custom` property, which won't be touched from PLINQ.
+
+Within the webworker context there's an `event` constant which may raise these events:
+
+- `message`: A message was received (the event handler can handle the message and stop the worker from handling it and sending any response)
+- `before`: Before the method will be executed (the event handler can handle the call and signal an error or provide a result)
+- `after`: After the method was executed (the event handler can modify the result and signal an error)
+
+Exceptions thrown in the webworker context will be re-thrown in the browser main context, which will crash the PLINQ execution.
+
+Parallel chunked queries may work and have a benefit, when:
+
+- The LINQ array items can be (de)serialized using JSON
+- A really huge amount of data needs to be processed, which justifies the webworker and JSON overhead
+- The LINQ method is suitable for parallel chunked processing (which `Distinct` is NOT, for example)
+
+At the moment there's only a chunking processor, and the threads won't communicate with each others. In other words: The current PLINQ implementation is lightweight, very simple, but limited.
+
+The default result handler assumes a thread to return an array of resulting items. `AppendResultHandler` can work with non-array results also. `GroupJoinResultHandler` joins thread results as they will come from `GroupBy`.
+
+If required, you can also define a chunking (that splits up the source LINQ array into arrays of items for every thread) handler as last parameter (see the DocComments for more information), that can also modify the number of threads to use.
+
+To try PLINQ online, please visit the [online demonstration](https://nd1012.github.io/JS-LINQ/index.html).
+
+**WARNING**: Currently parameters won't be encoded. If a parameter is an object or an array that contains a callback, the callbac will get lost!
+
 ## Useful LINQ extensions
 
 Feel free to load `linqext.js` or `linqext.min.js` in addition for some more hopefully helpful LINQ methods in the `LinqArrayExt` type:
@@ -301,22 +454,24 @@ Feel free to load `linqext.js` or `linqext.min.js` in addition for some more hop
 - `RightJoin`
 - `FullJoin`
 - `CrossJoin`
-- `Partition` helps creating partition tables
-- `Pivot` helps creating pivot tables
+- `Partition` helps creating partition tables (also `PartitionAsync`)
+- `Pivot` helps creating pivot tables (also `PivotAsync`)
 - `MovingAverage` calculates the moving average
 - `MovingAverages` yields moving average values
 - `TakeEvery` yields a stepped subset
 - `TakeRandom` returns one random item
-- `FallbackIfEmpty` returns a fallback array, if the instance is empty
+- `FallbackIfEmpty` returns a fallback array, if the instance is empty (also `FallbackIfEmptyAsync`)
 - `Shuffle` shuffles the whole array (optional in place)
-- `Doubles` finds items that are included more than once (and returns them grouped)
-- `Replace` replaces an item with another item
+- `Doubles` finds items that are included more than once (and returns them grouped) (also `DoublesAsync`)
+- `Replace` replaces an item with another item (also `ReplaceAsync`)
 - static `FromCsv` parses a CSV data source
 - static `FromXml` parses a XML data source
-- static `FromNode` converts a `Node` object (from the DOM or an XML document f.e.)
+- static `FromNode` converts a `Node` object (from the DOM or an XML document f.e., optional dynamic)
+- static `FromCursor` uses a synchronous (available for web workers only!) or asynchronous (`FromCursorAsync`) indexed DB cursor
 - static `Fibonacci` creates an (almost) endless Fibonacci sequence (will crash when it exceeds the maximum numeric value)
 - static `RandomInt` creates an infinity sequence of random integer values
 - static `RandomArbitrary` creates an infinity sequence of random numeric values
+- static `DynamicFromFactory` creates a dynamic LINQ array from an iterable returning factory action
 
 The global `From` method will return a `LinqArrayExt` instead of a `LinqArray`.
 
@@ -330,12 +485,35 @@ These are the main resources for more details about LINQ and my JavaScript imple
 
 To try JS-LINQ online, please visit the [online demonstration](https://nd1012.github.io/JS-LINQ/index.html).
 
+**TIP**: If you ask yourself when to use LINQ for data source, and when to use a normal array, there's maybe a simple answer: Use LINQ, if LINQ functionality is required or expected to be possibly required later. Or: Use a normal array, if you don't expect to require LINQ functionality on that data ever. Once you wrote code that uses array functions, it may become hard to change it to not disturb a LINQ array. Anyway, you can convert between normal array and LINQ array and back at any time and on the fly, or you don't even convert anything at all and use (dynamic) generators, where LINQ can make your life more easy.
+
 ## Known issues
 
 ### Direct modification breaks lazy child-LINQ arrays
 
-Any direct modification to the source or the LINQ array may break running lazy generators. To avoid that, you should call `EnsureGenerated` on the LINQ array to ensure that modifications are possible. However, any direct modification to a LINQ array instance after a method returned a new lazy LINQ array instance may break the results of those created instances (and their child-instances recursively)! In .NET you can't modify an enumerable for that reason, and every modifying method (`Append`, `Concat`, `OrderBy` etc.) will produce a new enumerable. The LINQ array allows direct (in place) modifications, but you should be sure to understand what you're doing (and what you should better avoid to do...).
+Unless you use a dynamic LINQ array, any direct modification to the source or the LINQ array may break running lazy generators. To avoid that, you should call `EnsureGenerated` on the LINQ array to ensure that modifications are possible. However, any direct modification to a LINQ array instance after a method returned a new lazy LINQ array instance may break the results of those created instances (and their child-instances recursively)! In .NET you can't modify an enumerable for that reason, and every modifying method (`Append`, `Concat`, `OrderBy` etc.) will produce a new enumerable. The LINQ array allows direct (in place) modifications, but you should be sure to understand what you're doing (and what you should better avoid to do...).
 
 ### Random errors from insane values
 
 The LINQ array won't sanitize any value before processing it - you're responsible for sane values, otherwise you'll suffer from random errors during (lazy) execution. For example, if you filter an array of objects using a key that doesn't exist in some items, you'll see the errors in the console. But since the LINQ array doesn't validate anything, it may become hard to debug that without knowing the index of the item that lead to an error. My goal was to keep the code lightweight, that's why any debug output is missing - however, if you need to debug something like that, try to work with `console.log` and `debugger` (or set breakpoints).
+
+### Asynchronous methods break dynamic
+
+The asynchronous methods don't support creating dynamic LINQ arrays, because asynchronous generator functions or iterators aren't supported. However, they'll work with dynamic LINQ arrays, but the result won't be dynamic anymore.
+
+### Exception without message
+
+The LINQ array may throw an exception without a message sometimes, which has this meaning:
+
+- `TypeError`: A parameter is from the wrong type, or the requested action can't be performed on this (configured) type of LINQ array
+- `RangeError`: A parameter or the LINQ array length isn't within a required range
+
+### Strange summaries
+
+The `Sum` method (and also `*Average`) will summarize all items and don't care for its type - means: Values won't be converted to numbers! For example, if all items are string types, the result would be all items concatenated. To avoid this, you can use an action to ensure a number type for each item:
+
+```js
+const summary=linqArray.Sum(item=>Number(item));
+```
+
+You could also use an item property name as action parameter value.

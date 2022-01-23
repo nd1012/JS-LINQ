@@ -1,2 +1,6 @@
 dev
 src/index.html
+tests/linq.js
+tests/linqext.js
+tests/plinq.js
+tests/plinqworker.js
