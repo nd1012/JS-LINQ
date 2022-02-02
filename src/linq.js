@@ -488,7 +488,7 @@ class LinqArray extends Array{
 	 * @return {LinqArray} Extended LINQ array
 	 */
 	Union(arr,comp=null,inPlace=false){
-		if(this._EnsureFinite().#IsDynamic){
+		if(this._EnsureFinite().#IsDynamic)
 			if(inPlace){
 				const generator=this.#Generator;
 				this.#Generator=function*(){
@@ -521,21 +521,19 @@ class LinqArray extends Array{
 					}
 				});
 			}
-		}else{
-			const res=inPlace?this.EnsureGenerated():this.EnsureGenerated().slice(),
-				values=new LinqArray(res.slice());
-			if(!inPlace) res.#Parent=this;
-			res.#IsGenerated=false;
-			res.#Generator=function*(){
-				let item;
-				for(item of arr){
-					if(values.Contains(item,comp)) continue;
-					yield item;
-					values.push(item);
-				}
-			}();
-			return res;
-		}
+		const res=inPlace?this.EnsureGenerated():this.EnsureGenerated().slice(),
+			values=new LinqArray(res.slice());
+		if(!inPlace) res.#Parent=this;
+		res.#IsGenerated=false;
+		res.#Generator=function*(){
+			let item;
+			for(item of arr){
+				if(values.Contains(item,comp)) continue;
+				yield item;
+				values.push(item);
+			}
+		}();
+		return res;
 	}
 
 	/**
@@ -549,7 +547,7 @@ class LinqArray extends Array{
 	 */
 	UnionBy(arr,action,comp=null,inPlace=false){
 		action=LinqArray.Helper.EnsureValueGetter(action);
-		if(this._EnsureFinite().#IsDynamic){
+		if(this._EnsureFinite().#IsDynamic)
 			if(inPlace){
 				const generator=this.#Generator;
 				this.#Generator=function*(){
@@ -592,25 +590,23 @@ class LinqArray extends Array{
 					}
 				});
 			}
-		}else{
-			const res=inPlace?this.EnsureGenerated():this.EnsureGenerated().slice(),
-				values=new LinqArray(res.slice());
-			if(!inPlace) res.#Parent=this;
-			res.#IsGenerated=false;
-			res.#Generator=function*(){
-				let item,
-					value,
-					index=0;
-				for(item of arr){
-					value=action(item,index);
-					index++;
-					if(values.Contains(value,comp)) continue;
-					yield item;
-					values.push(value);
-				}
-			}();
-			return res;
-		}
+		const res=inPlace?this.EnsureGenerated():this.EnsureGenerated().slice(),
+			values=new LinqArray(res.slice());
+		if(!inPlace) res.#Parent=this;
+		res.#IsGenerated=false;
+		res.#Generator=function*(){
+			let item,
+				value,
+				index=0;
+			for(item of arr){
+				value=action(item,index);
+				index++;
+				if(values.Contains(value,comp)) continue;
+				yield item;
+				values.push(value);
+			}
+		}();
+		return res;
 	}
 
 	/**
@@ -673,11 +669,11 @@ class LinqArray extends Array{
 					}
 					index++;
 				}
-			}else{
-				for(item of self._GetIterator()){
-					for(i of selector(item,index)) yield i;
-					index++;
-				}
+				return;
+			}
+			for(item of self._GetIterator()){
+				for(i of selector(item,index)) yield i;
+				index++;
 			}
 		});
 	}
@@ -705,9 +701,9 @@ class LinqArray extends Array{
 						ii++;
 					}
 				}
-			}else{
-				for(i of await selector(item,index)) res.push(i);
+				return;
 			}
+			for(i of await selector(item,index)) res.push(i);
 		});
 		return res;
 	}
@@ -875,16 +871,16 @@ class LinqArray extends Array{
 					if(comp?b.Any((b)=>comp(v,action(b))):b.Any((b)=>v==action(b))) yield item;
 					index++;
 				}
-			}else{
-				const lenB=arr.length,
-					a=lenA!=null&&lenB!=null&&lenA<lenB?self:arr,
-					b=a==self?arr:self,
-					isLinq=LinqArray.Helper.IsLinqArray(b);
-				for(item of a){
-					v=action(item,index);
-					if(comp?(isLinq?b.Any((b)=>comp(v,action(b))):b.some((b)=>comp(v,action(b)))):(isLinq?b.Any((b)=>v==action(b)):b.some((b)=>v==action(b)))) yield item;
-					index++;
-				}
+				return;
+			}
+			const lenB=arr.length,
+				a=lenA!=null&&lenB!=null&&lenA<lenB?self:arr,
+				b=a==self?arr:self,
+				isLinq=LinqArray.Helper.IsLinqArray(b);
+			for(item of a){
+				v=action(item,index);
+				if(comp?(isLinq?b.Any((b)=>comp(v,action(b))):b.some((b)=>comp(v,action(b)))):(isLinq?b.Any((b)=>v==action(b)):b.some((b)=>v==action(b)))) yield item;
+				index++;
 			}
 		});
 	}
@@ -1902,7 +1898,7 @@ class LinqArray extends Array{
 			item,
 			index=0;
 		for(item of this._GetIterator()){
-			v=action(item);
+			v=action(item,index);
 			if(v==Number.MAX_VALUE) return item;
 			if(max!=null&&v<=max){
 				index++;
@@ -1978,7 +1974,7 @@ class LinqArray extends Array{
 			item,
 			index=0;
 		for(item of this._GetIterator()){
-			v=action(item);
+			v=action(item,index);
 			if(v==Number.MIN_VALUE) return item;
 			if(min!=null&&v>=min){
 				index++;
@@ -2611,30 +2607,32 @@ class LinqArray extends Array{
 	*[Symbol.iterator](){
 		if(this.#IsDynamic){
 			yield* this.#Generator();
-		}else if(this.#Extended){
-			yield* this.#Extended[Symbol.iterator]();
-		}else{
-			const generator=this.#Generator,
-				superGenerator=this.#Store?super[Symbol.iterator]():null;
-			if(!generator){
-				if(!this.#Store) throw new TypeError('Iterated already - buffer is disabled');
-				yield* superGenerator;
-			}else if(generator){
-				let count=0;
-				if(superGenerator) for(let item=superGenerator.next();!item.done;item=superGenerator.next(),count++) yield item.value;
-				for(let item=generator.next();!item.done;item=generator.next(),count++){
-					if(this.#Store){
-						this.push(item.value);
-					}else{
-						this.#Iterated=true;
-					}
-					yield item.value;
-				}
-				this.#Generator=null;
-				this.#IsGenerated=true;
-				this.#EstimatedCount=this.#Store||this.#IsDynamic?null:count;
-			}
+			return;
 		}
+		if(this.#Extended){
+			yield* this.#Extended[Symbol.iterator]();
+			return;
+		}
+		const generator=this.#Generator,
+			superGenerator=this.#Store?super[Symbol.iterator]():null;
+		if(!generator){
+			if(!this.#Store) throw new TypeError('Iterated already - buffer is disabled');
+			yield* superGenerator;
+			return;
+		}
+		let count=0;
+		if(superGenerator) for(let item=superGenerator.next();!item.done;item=superGenerator.next(),count++) yield item.value;
+		for(let item=generator.next();!item.done;item=generator.next(),count++){
+			if(this.#Store){
+				this.push(item.value);
+			}else{
+				this.#Iterated=true;
+			}
+			yield item.value;
+		}
+		this.#Generator=null;
+		this.#IsGenerated=true;
+		this.#EstimatedCount=this.#Store||this.#IsDynamic?null:count;
 	}
 
 	/**
